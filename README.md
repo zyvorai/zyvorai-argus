@@ -2,15 +2,15 @@
 <!-- SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0 -->
 # Argus
 
-[![Release](https://img.shields.io/github/v/release/zyvorai/argus?label=release&color=2997ff)](https://github.com/zyvorai/argus/releases/latest)
-[![CI](https://github.com/zyvorai/argus/actions/workflows/ci.yml/badge.svg)](https://github.com/zyvorai/argus/actions/workflows/ci.yml)
-[![Security](https://github.com/zyvorai/argus/actions/workflows/security.yml/badge.svg)](https://github.com/zyvorai/argus/actions/workflows/security.yml)
+[![Release](https://img.shields.io/github/v/release/zyvorai/zyvorai-argus?label=release&color=2997ff)](https://github.com/zyvorai/zyvorai-argus/releases/latest)
+[![CI](https://github.com/zyvorai/zyvorai-argus/actions/workflows/ci.yml/badge.svg)](https://github.com/zyvorai/zyvorai-argus/actions/workflows/ci.yml)
+[![Security](https://github.com/zyvorai/zyvorai-argus/actions/workflows/security.yml/badge.svg)](https://github.com/zyvorai/zyvorai-argus/actions/workflows/security.yml)
 [![License: Zyvor Production v1.0](https://img.shields.io/badge/License-Zyvor%20Production%20v1.0-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab?logo=python&logoColor=white)](pyproject.toml)
 [![Node 20+](https://img.shields.io/badge/node-20%2B-339933?logo=node.js&logoColor=white)](package.json)
 [![TypeScript](https://img.shields.io/badge/typescript-Playwright-3178c6?logo=typescript&logoColor=white)](playwright/)
 
-![Argus — Autonomous QA for the real world.](docs/social/argus-share-card.png)
+![Argus — Autonomous QA for the real world.](docs/social/argus-hero-dark.jpg)
 
 [![Book a demo](https://img.shields.io/badge/Book_a_demo-0071e3?style=for-the-badge)](https://zyvor.dev/schedule?utm_source=github&utm_medium=argus&utm_campaign=readme_hero)
 [![30-day PoC](https://img.shields.io/badge/30--day_PoC-1d1d1f?style=for-the-badge)](https://zyvor.dev/poc?utm_source=github&utm_medium=argus&utm_campaign=readme_hero)
@@ -38,7 +38,7 @@ No LLM key required for smoke tests, rule-based parsing, and most dashboard acti
 Requires Python 3.10+, Node 20+, and Docker (only for the container path). `make install` handles the rest, including Playwright's Chromium download.
 
 ```bash
-git clone https://github.com/zyvorai/argus.git && cd argus
+git clone https://github.com/zyvorai/zyvorai-argus.git && cd argus
 cp .env.example .env          # set ZYVOR_BASE_URL
 make install                    # Python venv + Playwright Chromium
 argus test exec --grep @smoke   # first green run — no API key
