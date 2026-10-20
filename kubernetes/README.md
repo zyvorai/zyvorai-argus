@@ -33,6 +33,8 @@ Do not put shell comments on the same line as `make` — `make k8s-apply # comme
 # own domain, first
 kubectl apply -f kubernetes/configmap.yaml
 kubectl apply -f kubernetes/secret.yaml
+kubectl apply -f kubernetes/rbac.yaml
+kubectl apply -f kubernetes/pvc.yaml
 kubectl apply -f kubernetes/deployment.yaml
 kubectl apply -f kubernetes/service.yaml
 kubectl apply -f kubernetes/cronjob.yaml

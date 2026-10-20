@@ -10,22 +10,33 @@ import subprocess
 from pathlib import Path
 
 from agents.common.models import RegressionDiff
+from orchestrator.paths import repo_root
+
+_TIMEOUT_SECONDS = 120
 
 
 def rust_diff_available() -> bool:
-    binary = _find_binary()
-    return binary is not None and binary.exists()
+    return _find_binary() is not None
+
+
+def _is_usable(path: Path) -> bool:
+    return path.is_file() and os.access(path, os.X_OK)
 
 
 def _find_binary() -> Path | None:
-    repo = Path(__file__).resolve().parents[2]
-    candidates = [
+    # An explicit ZYVOR_DIFF_BINARY override wins; an unset/empty value must be
+    # ignored (Path("") is "." and would match the current directory).
+    override = os.environ.get("ZYVOR_DIFF_BINARY", "").strip()
+    if override:
+        p = Path(override)
+        if _is_usable(p):
+            return p
+    repo = repo_root()
+    for c in (
         repo / "rust" / "target" / "release" / "zyvor-diff",
         repo / "rust" / "target" / "debug" / "zyvor-diff",
-        Path(os.environ.get("ZYVOR_DIFF_BINARY", "")),
-    ]
-    for c in candidates:
-        if c and c.exists():
+    ):
+        if _is_usable(c):
             return c
     return None
 
@@ -45,7 +56,19 @@ def compare_with_rust(
             message="Rust zyvor-diff binary not found. Run: cd rust && cargo build --release",
         )
 
-    result = subprocess.run(
+    try:
+        result = _run_diff(binary, baseline, current, diff_output, threshold)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return RegressionDiff(
+            file=current.name,
+            status="fail",
+            message=f"Rust diff failed to run: {exc}",
+        )
+    return _parse_result(result, current, diff_output)
+
+
+def _run_diff(binary, baseline, current, diff_output, threshold):
+    return subprocess.run(
         [
             str(binary),
             "--baseline", str(baseline),
@@ -55,8 +78,11 @@ def compare_with_rust(
         ],
         capture_output=True,
         text=True,
+        timeout=_TIMEOUT_SECONDS,
     )
 
+
+def _parse_result(result, current: Path, diff_output: Path) -> RegressionDiff:
     try:
         data = json.loads(result.stdout.strip().split("\n")[-1])
         return RegressionDiff(
