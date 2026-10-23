@@ -1826,6 +1826,16 @@ function jobParams(kind) {
   return {};
 }
 
+/* Run buttons lock while the slot job runs, except concurrency-safe kinds when
+   ZYVOR_JOBS_MAX_CONCURRENT leaves room (the server stays the authority: 409 if full). */
+const jobCaps = { max: 1, kinds: new Set(), sides: 0, slotBusy: false };
+function applyBtnLock() {
+  const room = jobCaps.slotBusy && jobCaps.max > 1 && jobCaps.sides + 1 < jobCaps.max;
+  for (const btn of document.querySelectorAll(".act-btn")) {
+    btn.disabled = jobCaps.slotBusy && !(room && jobCaps.kinds.has(btn.dataset.kind));
+  }
+}
+
 async function startJob(kind) {
   const el = $("run-status");
   el.classList.remove("err");
@@ -1891,7 +1901,8 @@ let lastToastKey = "";
 function renderRunStatus(st) {
   const el = $("run-status");
   const busy = !!(st && st.running);
-  for (const btn of document.querySelectorAll(".act-btn")) btn.disabled = busy;
+  jobCaps.slotBusy = busy;
+  applyBtnLock();
 
   // live job panel: kind, elapsed, live pass/fail tally, per-test rows, streaming log
   const live = $("job-live");
@@ -2382,9 +2393,16 @@ async function loadSideJobs() {
   let rows = [];
   try {
     const res = await fetch("/api/dashboard/jobs");
-    if (res.ok) rows = (await res.json()).jobs || [];
+    if (res.ok) {
+      const data = await res.json();
+      rows = data.jobs || [];
+      jobCaps.max = data.max_concurrent || 1;
+      jobCaps.kinds = new Set(data.concurrent_kinds || []);
+    }
   } catch (e) { return; }
   const live = rows.filter((j) => j.concurrent && j.running);
+  jobCaps.sides = live.length;
+  applyBtnLock();
   if (!live.length) {
     box.style.display = "none"; box.innerHTML = "";
     if (sidePoll) { clearInterval(sidePoll); sidePoll = null; }
