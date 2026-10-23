@@ -10,10 +10,6 @@ Hands-on recipe that points Zyvor Argus at **[https://zyvor.dev](https://zyvor.d
 
 Mission Control driving a GuestKit journey (login → Flow URL → live steps):
 
-<p align="center">
-  <img src="../assets/zyvor-dev-mission-control-demo.gif" alt="Mission Control demo" width="720">
-</p>
-
 Also a raw Playwright capture of zyvor.dev (home → assert HyperSDK → click Products):
 
 <video src="../assets/zyvor-dev-mission-control-demo.webm" controls width="720" title="zyvor.dev journey recording"></video>

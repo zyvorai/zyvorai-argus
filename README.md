@@ -89,12 +89,6 @@ Ask Zyra (optional knowledge extra): [docs/tutorials/14-ask-zyra-knowledge.md](d
 
 ---
 
-## See it live
-
-![Mission Control — dark theme, side rail, live terminal job panel](docs/assets/zyvor-dev-mission-control-demo.gif)
-
-*Mission Control: grouped side rail · dark theme · Ask Zyra · macOS Terminal live job · Search / ⌘K · 25+ actions*
-
 ---
 
 ## How it fits together

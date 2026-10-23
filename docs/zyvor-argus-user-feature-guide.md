@@ -64,7 +64,7 @@ This is the user-facing onboarding guide — how to access the product, your fir
   1. Start the console: `argus serve --port 8080` and open `http://localhost:8080/dashboard` (add `--tls` for HTTPS beyond localhost).
   1. Expect the **side rail**, **dark theme** (light toggle in header), and **status hero**; ⌘K or **Search** opens the palette; category panels hold action cards.
   1. Run any capability from a card; watch per-test ✓/✗ chips stream live, with a ⏹ Stop button and HTML/PDF/Markdown/CSV download row.
-  1. Practice on the public site: watch the [committed demo GIF](../assets/zyvor-dev-mission-control-demo.gif) (or the [journey .webm](assets/zyvor-dev-mission-control-demo.webm)), then re-run — [Test zyvor.dev](user/test-zyvor-dev.md) / [Tutorial 13](tutorials/13-test-zyvor-dev-recording.md).
+  1. Practice on the public site: watch the [journey .webm](assets/zyvor-dev-mission-control-demo.webm), then re-run — [Test zyvor.dev](user/test-zyvor-dev.md) / [Tutorial 13](tutorials/13-test-zyvor-dev-recording.md).
   1. Point at your CRM sandbox (HubSpot, Pipedrive, Zoho, Salesforce): password login → flow video → route sweep — [Tutorial 19](tutorials/19-crm-golden-paths.md) / [CRM packs](crm/README.md). Zoho and Salesforce need no API token.
   1. Generate run history for the trends sparkline: `argus test run --source local` (each run appends to `reports/history/`).
   1. Turn any job into a recurring monitor from the Schedules panel (5 min – 6 h) — e.g. smoke every 15 min, TLS check daily.
@@ -224,7 +224,7 @@ _Wires into GitHub, your chat tools, your LLM of choice, and your cluster._
 
 1. **Install** — Copy `.env.example` to `.env` and run `make install` (needs Python 3.9+ and Node.js 20+).
 2. **Run a smoke test** — `argus test exec --grep @smoke` against your target (try `ZYVOR_BASE_URL=https://zyvor.dev`) — no LLM key required.
-3. **Watch / re-record a journey** — open the [Mission Control demo GIF](assets/zyvor-dev-mission-control-demo.gif), then `argus flow run https://zyvor.dev --steps docs/assets/zyvor-dev-demo.steps --video` — see [Test zyvor.dev](user/test-zyvor-dev.md).
+3. **Watch / re-record a journey** — open the [Mission Control demo .webm](assets/zyvor-dev-mission-control-demo.webm), then `argus flow run https://zyvor.dev --steps docs/assets/zyvor-dev-demo.steps --video` — see [Test zyvor.dev](user/test-zyvor-dev.md).
 4. **Open Mission Control** — `argus serve` then browse to `/dashboard` (grouped side rail + ⌘K) to run any of the 25+ actions live. Optional: enable [Ask Zyra](tutorials/14-ask-zyra-knowledge.md).
 5. **Wire up GitHub** — Set `ZYVOR_PRODUCT_REPO`, authenticate `gh`, then `argus test run --source github --spec docs/specs/my-feature.md`.
 6. **Add an LLM (optional)** — Set `LLM_PROVIDER` and the matching API key to unlock AI generation, analysis, and natural-language tests.

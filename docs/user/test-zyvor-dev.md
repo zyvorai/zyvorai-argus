@@ -4,10 +4,6 @@ Canonical how-to for pointing Zyvor Argus at **[https://zyvor.dev](https://zyvor
 
 ## Watch the recording
 
-<p align="center">
-  <img src="../assets/zyvor-dev-mission-control-demo.gif" alt="Mission Control demo" width="720">
-</p>
-
 <video src="../assets/zyvor-dev-mission-control-demo.webm" controls width="720" title="zyvor.dev journey recording"></video>
 
 - **[Download the .webm](../assets/zyvor-dev-mission-control-demo.webm)**
