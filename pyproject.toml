@@ -35,6 +35,7 @@ dependencies = [
     "aiohttp>=3.14.3",
     "cryptography>=50.0.1",
     "msgpack>=1.2.2",
+    "urllib3>=2.8.0",  # CVE-2026-97687/97689 (container-scan)
 ]
 
 [project.optional-dependencies]

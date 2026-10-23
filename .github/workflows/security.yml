@@ -103,6 +103,10 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           trivyignores: .trivyignore
+          # TypeScript 7's native compiler ships a Go binary; it is a build-time dev
+          # tool (tsc --noEmit), never executed at runtime, and its Go stdlib is
+          # upstream-pinned.
+          skip-files: '**/@typescript/typescript-*/lib/tsc'
           exit-code: '1'
 
   secret-scan:

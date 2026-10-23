@@ -6,6 +6,9 @@
 CVE-2026-14257  # brace-expansion (npm-bundled) — fixed only in npm 12+ (Node >=22)
 CVE-2026-69152  # brace-expansion (npm-bundled) — fixed only in npm 12+ (Node >=22)
 CVE-2026-69192  # ip-address (npm-bundled, via socks) — no Node-20-compatible npm fix yet
+CVE-2026-102276  # brace-expansion (npm-bundled) — fixed only in npm 12+ (Node >=22)
+CVE-2026-102278  # brace-expansion (npm-bundled) — fixed only in npm 12+ (Node >=22)
+CVE-2026-19534  # undici (npm-bundled) — no Node-20-compatible npm fix yet
 CVE-2026-73566  # tar (npm-bundled) — fixed only in npm 12+ (Node >=22); confirmed via usr/local/lib/node_modules/npm/node_modules/tar
 
 # msgpack (GHSA-6v7p-g79w-8964) and setuptools (CVE-2025-47273) are pinned past
