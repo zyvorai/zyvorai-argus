@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<defs>
+    <linearGradient id="g" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#c58bff"/>
+      <stop offset="1" stop-color="#3d7bff"/>
+    </linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2c2c2e"/>
+      <stop offset="1" stop-color="#1d1d1f"/>
+    </linearGradient>
+  
+<radialGradient id="glow" cx="0.2" cy="0.35" r="0.7"><stop offset="0" stop-color="#3d7bff" stop-opacity="0.35"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs>
+<rect width="1200" height="630" fill="#000"/><rect width="1200" height="630" fill="url(#glow)"/>
+<g transform="translate(90,70) scale(0.3125)">
+  <rect width="1024" height="1024" rx="229" fill="url(#bg)"/>
+  <path d="M168 512C252 380 376 316 512 316S772 380 856 512C772 644 648 708 512 708S252 644 168 512Z" fill="none" stroke="url(#g)" stroke-width="100" stroke-linejoin="round"/>
+  <circle cx="512" cy="512" r="92" fill="url(#g)"/>
+  <circle cx="512" cy="512" r="40" fill="#30d158"/>
+
+</g>
+<text x="90" y="470" font-family="-apple-system,Helvetica Neue,Helvetica,Arial,sans-serif" font-size="84" font-weight="700" fill="#f5f5f7" letter-spacing="-2">Zyvor Argus</text>
+<text x="90" y="530" font-family="-apple-system,Helvetica Neue,Helvetica,Arial,sans-serif" font-size="36" fill="#a1a1a6">Autonomous QA for the real world</text>
+<text x="90" y="582" font-family="-apple-system,Helvetica Neue,Helvetica,Arial,sans-serif" font-size="26" fill="#a1a1a6">Requirements to tests to Mission Control. Now for Mac.</text>
+</svg>
