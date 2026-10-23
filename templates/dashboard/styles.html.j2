@@ -577,4 +577,29 @@
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
     .panel { animation: none; }
   }
+
+  /* Gryvia-family polish: hairlines, glow, status pills, skeletons */
+  .argus-lockup { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .argus-icon { border-radius: 8px; box-shadow: 0 0 0 1px var(--border), 0 4px 14px rgba(61,123,255,0.25); flex: none; }
+  .argus-name { font-size: 1.15rem; font-weight: 650; letter-spacing: -0.03em; color: var(--text); }
+  .zyvor-mark { opacity: 0.8; }
+  .stat-tile { position: relative; transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), transform 0.2s var(--ease-out); }
+  .stat-tile:hover { border-color: var(--accent-border-soft); box-shadow: 0 0 0 1px var(--accent-border-soft), 0 8px 28px var(--accent-soft); transform: translateY(-1px); }
+  .stat-value { font-size: 1.85rem; font-weight: 650; letter-spacing: -0.035em; }
+  .stat-label { font-size: 0.7rem; letter-spacing: 0.07em; }
+  .glass, .card { transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out); }
+  .glass:hover, .card:hover { border-color: var(--accent-border-soft); }
+  .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin: auto 6px auto 0; flex: none; }
+  .chip.pass::before { box-shadow: 0 0 8px currentColor; }
+  .runs-table tbody tr { transition: background 0.15s var(--ease-out); }
+  .runs-table tbody tr:hover { background: var(--hover-bg); }
+  @keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+  .skeleton { border-radius: 8px; min-height: 1em; color: transparent !important;
+    background: linear-gradient(90deg, var(--hover-bg) 25%, var(--accent-soft) 50%, var(--hover-bg) 75%); background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite; }
+  .stat-value:empty::before, .stat-value:where([data-loading])::before { content: ""; }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton { animation: none; }
+    .stat-tile:hover { transform: none; }
+  }
 </style>
