@@ -602,4 +602,26 @@
     .skeleton { animation: none; }
     .stat-tile:hover { transform: none; }
   }
+
+  /* Vytrix patterns: concentric radii, colour-is-data, 3px focus, reduced transparency */
+  :root { --r-panel: 18px; --r-control: 12px; --r-small: 8px;
+    --m-pods: #2997ff; --m-replicas: #a550e0; --m-run: #ff9f0a; --m-rate: #30d158; --m-cron: #ff2d78; --m-knowledge: #5ac8fa; }
+  .glass, .card, .stat-tile { border-radius: var(--r-panel); }
+  .stat-tile { overflow: hidden; }
+  .stat-tile[data-metric]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+    background: var(--m-color, var(--accent)); opacity: 0.85; }
+  .stat-tile[data-metric="pods"] { --m-color: var(--m-pods); }
+  .stat-tile[data-metric="replicas"] { --m-color: var(--m-replicas); }
+  .stat-tile[data-metric="run"] { --m-color: var(--m-run); }
+  .stat-tile[data-metric="rate"] { --m-color: var(--m-rate); }
+  .stat-tile[data-metric="cron"] { --m-color: var(--m-cron); }
+  .stat-tile[data-metric="knowledge"] { --m-color: var(--m-knowledge); }
+  .btn, button, select, input[type="text"], input[type="search"], input[type="url"] { border-radius: var(--r-control); }
+  .chip, .rail-link { border-radius: var(--r-control); }
+  .chip { border-radius: 980px; }
+  :focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--r-small); }
+  @media (prefers-reduced-transparency: reduce) {
+    :root { --header-bg: var(--bg); }
+    header, .rail-overlay { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  }
 </style>
