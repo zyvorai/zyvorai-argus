@@ -12,8 +12,10 @@ rm -rf "$STAGE" && mkdir -p "$STAGE"
 "$PY" -m PyInstaller desktop/build/argus.spec --noconfirm \
   --distpath "$STAGE" --workpath "${TMPDIR:-/tmp}/argus-pyi"
 
-# Production node_modules (playwright, axe-core) inside the bundle root.
-npm ci --omit=dev --ignore-scripts --workspaces=false
+# node_modules the test runner needs (playwright + axe are devDependencies,
+# so don't --omit=dev); drop the build-only packages afterwards.
+npm ci --ignore-scripts --workspaces=false
+rm -rf node_modules/typescript node_modules/@types node_modules/@tauri-apps
 cp -R node_modules "$STAGE/argus/_internal/node_modules"
 
 # Node runtime: official self-contained build (Homebrew's node links libnode.dylib).
