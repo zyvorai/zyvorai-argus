@@ -99,7 +99,7 @@ class DurableJobService:
             ) as span:
                 try:
                     params = resolve_secret_refs(job["params"])
-                    started, _ = jobs.trigger(kind, params)
+                    started, started_state = jobs.trigger(kind, params)
                     if not started:
                         self.store.requeue_job(job_id, "legacy runner is busy")
                         if span:
@@ -107,11 +107,14 @@ class DurableJobService:
                         self._stop.wait(self.poll_s)
                         continue
 
+                    # Follow our own job by id: with concurrent jobs enabled the
+                    # runner's "current" status may belong to another job.
+                    run_id = (started_state or {}).get("job_id")
                     while not self._stop.is_set():
                         self.store.heartbeat(job_id)
-                        state = jobs.status()
+                        state = jobs.status(run_id) if run_id else jobs.status()
                         if self.store.cancellation_requested(job_id):
-                            jobs.cancel()
+                            jobs.cancel(run_id) if run_id else jobs.cancel()
                         if not state.get("running"):
                             error = state.get("error")
                             if error == "cancelled by user" or self.store.cancellation_requested(job_id):

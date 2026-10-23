@@ -374,6 +374,29 @@ async def jobs_status() -> dict[str, Any]:
     return state
 
 
+@router.get("/api/dashboard/jobs")
+async def list_jobs() -> dict[str, Any]:
+    """All known jobs, newest first (the slot job plus concurrent ones)."""
+    return {"jobs": jobs.list_jobs(), "max_concurrent": jobs.max_concurrent(),
+            "concurrent_kinds": sorted(jobs.CONCURRENT_SAFE_KINDS)}
+
+
+@router.get("/api/dashboard/jobs/{job_id}")
+async def get_job(job_id: str) -> dict[str, Any]:
+    state = jobs.status(job_id)
+    if state.get("error") == "unknown job":
+        raise HTTPException(status_code=404, detail="unknown job")
+    return state
+
+
+@router.post("/api/dashboard/jobs/{job_id}/cancel")
+async def cancel_job_by_id(job_id: str) -> dict[str, Any]:
+    state = jobs.cancel(job_id)
+    if state.get("error") == "unknown job":
+        raise HTTPException(status_code=404, detail="unknown job")
+    return state
+
+
 # Back-compat aliases for the original run trigger API
 @router.post("/api/dashboard/run", status_code=202)
 async def trigger_run(mode: str = Query("smoke", pattern="^(smoke|full)$")) -> Response:

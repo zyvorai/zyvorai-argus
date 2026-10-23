@@ -10,14 +10,20 @@ Kinds mirror the CLI:
   create      argus test create "description" [--execute]
   regression  argus vision regression [--update-baselines]
 
-One job at a time; runs on a daemon thread; kind-specific `result` payloads.
+One job at a time by default; runs on a daemon thread; kind-specific `result`
+payloads. Set ZYVOR_JOBS_MAX_CONCURRENT > 1 to let jobs of the concurrency-safe
+kinds (CONCURRENT_SAFE_KINDS: HTTP probes, ping, tls, port/cipher scans — no
+Playwright, no shared files) run next to the running job, each with its own
+progress log and cancel flag. Everything else still serializes.
 """
 
 from __future__ import annotations
 
+import contextvars
 import os
 import re
 import threading
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -81,12 +87,18 @@ DAST_KINDS = frozenset({
     "auth_attack_scan", "idor_scan",
 })
 
+# Kinds that share nothing with other jobs: no Playwright runner (which keeps a
+# single process handle), no report/test output files, no live-case list.
+CONCURRENT_SAFE_KINDS = frozenset(PROBE_KINDS | {"ping", "tls", "port_scan", "tls_cipher_scan"})
+_MAX_FINISHED_SIDE_JOBS = 20
+
 _lock = threading.Lock()
 _cancel = threading.Event()
 _progress: list[str] = []
 _live_cases: list[dict[str, Any]] = []
 _state: dict[str, Any] = {
     "running": False,
+    "job_id": None,
     "kind": None,
     "params": {},
     "started_at": None,
@@ -98,6 +110,55 @@ _state: dict[str, Any] = {
 
 class JobCancelled(Exception):
     pass
+
+
+class _SideJob:
+    """A concurrent job that runs beside the legacy single slot. It owns its
+    progress log and cancel flag; the slot job keeps using the module globals."""
+
+    def __init__(self, kind: str, params: dict[str, Any]) -> None:
+        self.job_id = uuid.uuid4().hex[:12]
+        self.kind = kind
+        self.params = params
+        self.running = True
+        self.started_at = _now()
+        self.finished_at: Optional[str] = None
+        self.result: Optional[dict[str, Any]] = None
+        self.error: Optional[str] = None
+        self.cancel = threading.Event()
+        self.progress: list[str] = []
+
+    def snapshot(self) -> dict[str, Any]:
+        with _lock:
+            return {
+                "job_id": self.job_id,
+                "running": self.running,
+                "kind": self.kind,
+                "params": _redact_params(self.params),
+                "started_at": self.started_at,
+                "finished_at": self.finished_at,
+                "result": self.result,
+                "error": self.error,
+                "progress": self.progress[-80:],
+                "live_cases": [],
+                "live_tally": {"passed": 0, "failed": 0},
+                "concurrent": True,
+            }
+
+
+# Set inside a side job's thread so log_progress/_check_cancel reach that job.
+# None means the legacy slot (and the CLI, which calls _job_* directly).
+_ctx_job: contextvars.ContextVar[Optional[_SideJob]] = contextvars.ContextVar("argus_job", default=None)
+_side_jobs: dict[str, _SideJob] = {}
+_slot_history: dict[str, dict[str, Any]] = {}  # final views of finished slot jobs, by job_id
+
+
+def max_concurrent() -> int:
+    """How many jobs may run at once (ZYVOR_JOBS_MAX_CONCURRENT, default 1)."""
+    try:
+        return max(1, min(16, int(os.environ.get("ZYVOR_JOBS_MAX_CONCURRENT", "1"))))
+    except ValueError:
+        return 1
 
 
 def _repo_root() -> Path:
@@ -115,13 +176,33 @@ def log_progress(message: str) -> None:
     from orchestrator.security.redaction import redact_text
     message = redact_text(message)
     stamp = datetime.now(timezone.utc).strftime("%H:%M:%S")
+    side = _ctx_job.get()
     with _lock:
-        _progress.append(f"[{stamp}] {message}")
-        del _progress[:-200]
+        target = side.progress if side is not None else _progress
+        target.append(f"[{stamp}] {message}")
+        del target[:-200]
+
+
+def current_logger() -> Callable[[str], None]:
+    """A log function bound to the calling job, safe to hand to child threads
+    (a ContextVar does not follow threads started by the job)."""
+    side = _ctx_job.get()
+    if side is None:
+        return log_progress
+
+    def _log(message: str) -> None:
+        token = _ctx_job.set(side)
+        try:
+            log_progress(message)
+        finally:
+            _ctx_job.reset(token)
+
+    return _log
 
 
 def _check_cancel() -> None:
-    if _cancel.is_set():
+    side = _ctx_job.get()
+    if (side.cancel if side is not None else _cancel).is_set():
         raise JobCancelled("cancelled by user")
 
 
@@ -166,8 +247,27 @@ def _stream_line_audit(line: str) -> None:
         )
 
 
-def cancel() -> dict[str, Any]:
-    """Request cancellation of the running job (kills an in-flight Playwright run)."""
+def cancel(job_id: str | None = None) -> dict[str, Any]:
+    """Request cancellation of the running job (kills an in-flight Playwright run).
+
+    With a job_id that belongs to a concurrent job, only that job is cancelled and
+    the Playwright process is left alone (it belongs to the slot job)."""
+    if job_id is not None:
+        with _lock:
+            side = _side_jobs.get(job_id)
+            is_slot = _state.get("job_id") == job_id
+        if side is not None:
+            if side.running:
+                side.cancel.set()
+                token = _ctx_job.set(side)
+                try:
+                    log_progress("⏹ cancellation requested…")
+                finally:
+                    _ctx_job.reset(token)
+            return side.snapshot()
+        if not is_slot:
+            # Unknown or already-finished job: never fall through to the slot job.
+            return status(job_id)
     with _lock:
         running = _state["running"]
     if running:
@@ -189,17 +289,35 @@ def _redact_params(params: Any) -> Any:
     return redact(params)
 
 
-def status() -> dict[str, Any]:
-    with _lock:
-        state = dict(_state)
-        state["params"] = _redact_params(state.get("params"))
-        state["progress"] = _progress[-80:]
-        state["live_cases"] = list(_live_cases)
-        state["live_tally"] = {
-            "passed": sum(1 for c in _live_cases if c["status"] == "passed"),
-            "failed": sum(1 for c in _live_cases if c["status"] != "passed"),
-        }
+def _slot_view() -> dict[str, Any]:
+    """The legacy slot job as a status dict. Caller holds _lock."""
+    state = dict(_state)
+    state["params"] = _redact_params(state.get("params"))
+    state["progress"] = _progress[-80:]
+    state["live_cases"] = list(_live_cases)
+    state["live_tally"] = {
+        "passed": sum(1 for c in _live_cases if c["status"] == "passed"),
+        "failed": sum(1 for c in _live_cases if c["status"] != "passed"),
+    }
     return state
+
+
+def status(job_id: str | None = None) -> dict[str, Any]:
+    """Status of the slot job, or of the job with this job_id (slot, concurrent or
+    a recently finished slot job)."""
+    if job_id is not None:
+        with _lock:
+            side = _side_jobs.get(job_id)
+            if side is None and _state.get("job_id") != job_id:
+                return dict(_slot_history.get(job_id) or {
+                    "job_id": job_id, "running": False, "kind": None, "result": None,
+                    "error": "unknown job", "progress": [], "live_cases": [],
+                    "live_tally": {"passed": 0, "failed": 0},
+                })
+        if side is not None:
+            return side.snapshot()
+    with _lock:
+        return _slot_view()
 
 
 def _safe_local_spec(spec: str) -> str:
@@ -873,26 +991,102 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
 
 
 def trigger(kind: str, params: dict[str, Any] | None = None) -> tuple[bool, dict[str, Any]]:
-    """Start a job unless one is already running. Returns (started, status)."""
+    """Start a job unless the runner is at capacity. Returns (started, status).
+
+    By default one job runs at a time. With ZYVOR_JOBS_MAX_CONCURRENT > 1, a job of a
+    CONCURRENT_SAFE_KINDS kind may start while the slot job runs; the returned status
+    carries its job_id."""
     clean = _validate(kind, params or {})
+    side: Optional[_SideJob] = None
     with _lock:
-        if _state["running"]:
+        running_now = int(bool(_state["running"])) + sum(1 for j in _side_jobs.values() if j.running)
+        if running_now >= max_concurrent():
             return False, dict(_state)
-        _cancel.clear()
-        _progress.clear()
-        _live_cases.clear()
-        _state.update(
-            running=True,
-            kind=kind,
-            params=clean,
-            started_at=_now(),
-            finished_at=None,
-            result=None,
-            error=None,
-        )
+        if _state["running"]:
+            # The slot is taken: only a concurrency-safe kind may run beside it.
+            if kind not in CONCURRENT_SAFE_KINDS:
+                return False, dict(_state)
+            side = _SideJob(kind, clean)
+            _side_jobs[side.job_id] = side
+            _prune_side_jobs()
+            stamp = datetime.now(timezone.utc).strftime("%H:%M:%S")
+            side.progress.append(f"[{stamp}] ▶ {kind} started")
+        else:
+            _cancel.clear()
+            _progress.clear()
+            _live_cases.clear()
+            _state.update(
+                running=True,
+                job_id=uuid.uuid4().hex[:12],
+                kind=kind,
+                params=clean,
+                started_at=_now(),
+                finished_at=None,
+                result=None,
+                error=None,
+            )
+    if side is not None:
+        threading.Thread(target=_run_side, args=(side,), daemon=True).start()
+        return True, side.snapshot()
     log_progress(f"▶ {kind} started")
     threading.Thread(target=_run, args=(kind, clean), daemon=True).start()
     return True, status()
+
+
+def _prune_side_jobs() -> None:
+    """Keep the registry bounded: drop the oldest finished concurrent jobs. Caller holds _lock."""
+    finished = [j for j in _side_jobs.values() if not j.running]
+    for old in finished[: max(0, len(finished) - _MAX_FINISHED_SIDE_JOBS)]:
+        _side_jobs.pop(old.job_id, None)
+
+
+def _run_side(side: _SideJob) -> None:
+    import time as _time
+
+    from orchestrator.dashboard import activity
+
+    token = _ctx_job.set(side)
+    t0 = _time.time()
+    result: Optional[dict[str, Any]] = None
+    error: Optional[str] = None
+    try:
+        result = _JOBS[side.kind](side.params)
+        log_progress(f"✅ {side.kind} finished: {_brief(side.kind, result, None)}")
+    except JobCancelled:
+        error = "cancelled by user"
+        log_progress("⏹ job cancelled")
+    except Exception as exc:  # surfaced in status, never crashes the server
+        error = str(exc)
+        log_progress(f"❌ {side.kind} failed: {error}")
+    finally:
+        _ctx_job.reset(token)
+    with _lock:
+        side.running = False
+        side.finished_at = _now()
+        side.result = result
+        side.error = error
+    activity.record_job(side.kind, error is None, _brief(side.kind, result, error), _time.time() - t0)
+
+
+def list_jobs() -> list[dict[str, Any]]:
+    """Every known job, newest first: the slot job (if any) plus concurrent jobs."""
+    with _lock:
+        slot = dict(_state)
+        sides = list(_side_jobs.values())
+    rows: list[dict[str, Any]] = []
+    if slot.get("kind"):
+        rows.append(
+            {"job_id": slot.get("job_id"), "kind": slot["kind"], "running": bool(slot["running"]),
+             "started_at": slot.get("started_at"), "finished_at": slot.get("finished_at"),
+             "error": slot.get("error"), "concurrent": False}
+        )
+    for j in sides:
+        rows.append(
+            {"job_id": j.job_id, "kind": j.kind, "running": j.running, "started_at": j.started_at,
+             "finished_at": j.finished_at, "error": j.error, "concurrent": True}
+        )
+    rows.sort(key=lambda r: r.get("started_at") or "", reverse=True)
+    return rows
 
 
 def _brief(kind: str, result: Optional[dict[str, Any]], error: Optional[str]) -> str:
@@ -930,6 +1124,10 @@ def _run(kind: str, params: dict[str, Any]) -> None:
     duration = _time.time() - t0
     with _lock:
         _state.update(running=False, finished_at=_now(), result=result, error=error)
+        if _state.get("job_id"):
+            _slot_history[_state["job_id"]] = _slot_view()
+            for old in list(_slot_history)[: max(0, len(_slot_history) - _MAX_FINISHED_SIDE_JOBS)]:
+                _slot_history.pop(old, None)
     activity.record_job(kind, error is None, _brief(kind, result, error), duration)
 
 
@@ -3886,7 +4084,7 @@ def _make_probe_job(name: str) -> Callable[[dict[str, Any]], dict[str, Any]]:
         from agents.probes.http_probes import PROBES
 
         kwargs = {k: v for k, v in params.items()}
-        kwargs["log"] = log_progress
+        kwargs["log"] = current_logger()
         return PROBES[name](**kwargs)
 
     return _job
