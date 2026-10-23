@@ -26,7 +26,7 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
       - run: python -m pip install --upgrade pip setuptools
-      - run: pip install -e '.[dev,knowledge]' mypy pip-audit bandit[toml] pytest-cov
+      - run: pip install -e '.[dev,knowledge,otel]' mypy pip-audit bandit[toml] pytest-cov
       - run: ruff check .
       - run: mypy orchestrator agents --ignore-missing-imports
       # TODO: raise back toward 70% as test coverage improves. Raised 47 -> 50
