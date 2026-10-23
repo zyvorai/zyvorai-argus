@@ -205,15 +205,13 @@ def status() -> dict[str, Any]:
 def _safe_local_spec(spec: str) -> str:
     """Resolve a local spec path strictly inside the repo — the trigger is
     network-reachable and must not read arbitrary host files."""
-    root = _repo_root().resolve()
-    candidate = (root / spec).resolve() if not os.path.isabs(spec) else Path(spec).resolve()
-    try:
-        candidate.relative_to(root)
-    except ValueError as exc:
-        raise ValueError("spec path must be inside the repository") from exc
-    if not candidate.is_file():
+    root = os.path.realpath(str(_repo_root()))
+    fullpath = os.path.realpath(os.path.join(root, spec))
+    if not fullpath.startswith(root + os.sep):
+        raise ValueError("spec path must be inside the repository")
+    if not os.path.isfile(fullpath):
         raise ValueError(f"spec not found: {spec}")
-    return str(candidate)
+    return fullpath
 
 
 def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:

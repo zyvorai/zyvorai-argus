@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import os
 import uuid
 from typing import Any
 
@@ -105,18 +106,16 @@ async def get_job_artifact(request: Request, job_id: str, href: str = Query(...)
 
     from orchestrator.dashboard.jobs import _repo_root
 
-    reports_root = (_repo_root() / "reports").resolve()
-    # Join under reports/ only (href is already allow-listed against the job
-    # result above). relative_to() is the containment check CodeQL recognizes.
+    reports_root = os.path.realpath(str(_repo_root() / "reports"))
+    # href is allow-listed against the job result above; still contain the
+    # joined path under reports/ (normalise, then prefix-check).
     rel = href.lstrip("/")
     if rel.startswith("reports/"):
         rel = rel[len("reports/") :]
-    try:
-        file_path = (reports_root / rel).resolve().relative_to(reports_root)
-        file_path = reports_root / file_path
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="invalid artifact path") from exc
-    if not file_path.is_file():
+    file_path = os.path.realpath(os.path.join(reports_root, rel))
+    if not file_path.startswith(reports_root + os.sep):
+        raise HTTPException(status_code=400, detail="invalid artifact path")
+    if not os.path.isfile(file_path):
         raise HTTPException(status_code=404, detail="artifact file no longer on disk")
     return FileResponse(file_path)
 

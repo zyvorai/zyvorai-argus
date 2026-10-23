@@ -26,11 +26,12 @@
     "docs:sync": "node scripts/user-docs/sync-to-website.mjs"
   },
   "dependencies": {
-    "axe-core": "^4.13.0"
+    "@tauri-apps/cli": "^2.12.3",
+    "axe-core": "^4.14.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0",
-    "@types/node": "^26.6.2",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
     "typescript": "^7.0.2"
   }
 }
