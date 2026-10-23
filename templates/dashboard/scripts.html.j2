@@ -2374,7 +2374,41 @@ function ensureBusyPoll(busy) {
   }
 }
 
+/* concurrent jobs (ZYVOR_JOBS_MAX_CONCURRENT > 1) run beside the slot job; list them with a Stop each */
+let sidePoll = null;
+async function loadSideJobs() {
+  const box = $("side-jobs");
+  if (!box) return;
+  let rows = [];
+  try {
+    const res = await fetch("/api/dashboard/jobs");
+    if (res.ok) rows = (await res.json()).jobs || [];
+  } catch (e) { return; }
+  const live = rows.filter((j) => j.concurrent && j.running);
+  if (!live.length) {
+    box.style.display = "none"; box.innerHTML = "";
+    if (sidePoll) { clearInterval(sidePoll); sidePoll = null; }
+    return;
+  }
+  box.style.display = "block";
+  box.innerHTML = "<strong>Also running</strong>" + live.map((j) => {
+    const secs = j.started_at ? Math.max(0, (Date.now() - new Date(j.started_at).getTime()) / 1000 | 0) : 0;
+    return '<div class="side-job"><span class="spin" aria-hidden="true"></span> '
+      + esc(KIND_LABELS[j.kind] || j.kind) + '<span class="d"> · ' + rel(secs) + "</span>"
+      + ' <button type="button" class="term-btn danger" data-stop-job="' + esc(j.job_id) + '">Stop</button></div>';
+  }).join("");
+  for (const b of box.querySelectorAll("[data-stop-job]")) {
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      await fetch("/api/dashboard/jobs/" + encodeURIComponent(b.dataset.stopJob) + "/cancel", { method: "POST" });
+      loadSideJobs();
+    });
+  }
+  if (!sidePoll) sidePoll = setInterval(loadSideJobs, 3000);
+}
+
 async function sync() {
+  loadSideJobs();
   try {
     const [overview, pods, runs, runSt] = await Promise.all([
       fetch("/api/dashboard/overview").then((r) => r.json()),
