@@ -15,8 +15,8 @@ rm -rf "$STAGE" && mkdir -p "$STAGE"
 # node_modules the test runner needs (playwright + axe are devDependencies,
 # so don't --omit=dev); drop the build-only packages afterwards.
 npm ci --ignore-scripts --workspaces=false
-rm -rf node_modules/typescript node_modules/@types node_modules/@tauri-apps
 cp -R node_modules "$STAGE/argus/_internal/node_modules"
+rm -rf "$STAGE/argus/_internal/node_modules"/{typescript,@types,@tauri-apps}
 
 # Node runtime: official self-contained build (Homebrew's node links libnode.dylib).
 NODE_VERSION="${NODE_VERSION:-v22.22.0}"
