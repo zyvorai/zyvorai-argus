@@ -397,23 +397,46 @@ function renderPods(data) {
 }
 $("pod-search").addEventListener("input", () => { if (podsCache) renderPods(podsCache); });
 
-/* test-health panel */
+/* test-health panel — flaky tests can be quarantined and released */
 async function loadTestHealth() {
+  const el = $("test-health");
   try {
-    const data = await fetch("/api/dashboard/tests").then((r) => r.json());
-    const el = $("test-health");
+    const [data, q] = await Promise.all([
+      fetch("/api/dashboard/tests").then((r) => r.json()),
+      fetch("/api/v2/intel/quarantine").then((r) => (r.ok ? r.json() : { quarantine: [] })).catch(() => ({ quarantine: [] })),
+    ]);
+    const held = new Map((q.quarantine || []).map((e) => [e.title, e]));
     if (!data.tests.length) {
       el.innerHTML = '<span class="d">No test history yet — run tests to build trends.</span>';
       return;
     }
-    el.innerHTML = data.tests.map((t) =>
-      '<div class="feed-item"><span class="f-kind">' + (t.flaky ? "🎲" : t.fails ? "⚠️" : "✅") + "</span>"
-      + '<span class="f-brief">' + esc(t.title) + "</span>"
-      + '<span class="f-when">' + t.fails + "/" + t.runs + " fails"
-      + (t.fail_pct ? " · " + t.fail_pct + "%" : "") + "</span></div>"
-    ).join("");
+    el.innerHTML = data.tests.map((t) => {
+      const entry = held.get(t.title);
+      const action = entry
+        ? '<button class="copy-btn" data-release="' + esc(entry.key) + '" title="Release from quarantine">Release</button>'
+        : (t.flaky ? '<button class="copy-btn" data-quarantine="' + esc(t.title) + '" title="Quarantine for 72 hours">Quarantine</button>' : "");
+      return '<div class="feed-item"><span class="f-kind">' + (entry ? "⏸" : t.flaky ? "🎲" : t.fails ? "⚠️" : "✅") + "</span>"
+        + '<span class="f-brief">' + esc(t.title) + (entry ? ' <span class="chip">quarantined</span>' : "") + "</span>"
+        + '<span class="f-when">' + t.fails + "/" + t.runs + " fails"
+        + (t.fail_pct ? " · " + t.fail_pct + "%" : "") + "</span>" + action + "</div>";
+    }).join("");
+    for (const b of el.querySelectorAll("[data-quarantine]"))
+      b.addEventListener("click", async () => {
+        b.disabled = true;
+        await fetch("/api/v2/intel/quarantine", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: b.dataset.quarantine, reason: "Flaky: quarantined from Mission Control", ttl_hours: 72 }),
+        });
+        loadTestHealth();
+      });
+    for (const b of el.querySelectorAll("[data-release]"))
+      b.addEventListener("click", async () => {
+        b.disabled = true;
+        await fetch("/api/v2/intel/quarantine/" + encodeURIComponent(b.dataset.release), { method: "DELETE" });
+        loadTestHealth();
+      });
   } catch (err) {
-    $("test-health").innerHTML = '<span class="d">failed: ' + esc(String(err)) + "</span>";
+    el.innerHTML = '<span class="d">failed: ' + esc(String(err)) + "</span>";
   }
 }
 $("th-refresh").addEventListener("click", loadTestHealth);
