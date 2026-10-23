@@ -56,7 +56,7 @@ sudo apt-get install -y python3.12 python3.12-venv nodejs npm git
 docker info
 kubectl version --client
 helm version
-python3 --version    # 3.10+ if using make install
+python3 --version    # 3.11+ if using make install
 node --version       # 20+ if using make install
 ```
 

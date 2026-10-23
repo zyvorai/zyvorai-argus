@@ -5,12 +5,12 @@
         desktop-dev desktop-build desktop-build-signed desktop-check
 
 # Bare `pip` on macOS is often the Xcode CLT interpreter (3.9.6), which
-# fails requires-python = ">=3.10". Prefer PYTHON=..., else the first
-# 3.10+ on PATH whose stdlib works (Homebrew CPythons can fail ensurepip
+# fails requires-python = ">=3.11". Prefer PYTHON=..., else the first
+# 3.11+ on PATH whose stdlib works (Homebrew CPythons can fail ensurepip
 # with a libexpat symbol error). If none, fall back to `uv`.
 ifndef PYTHON
 PYTHON := $(shell \
-	for c in python3.12 python3.13 python3.11 python3.10 python3; do \
+	for c in python3.12 python3.13 python3.11 python3; do \
 		command -v $$c >/dev/null 2>&1 || continue; \
 		$$c -c 'import sys; from xml.parsers import expat; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' \
 			2>/dev/null && echo $$c && break; \

@@ -28,9 +28,9 @@ npx playwright install --with-deps chromium
 npx playwright install --with-deps
 ```
 
-### `Package 'zyvor-argus' requires a different Python: 3.9.6 not in '>=3.10'`
+### `Package 'zyvor-argus' requires a different Python: 3.9.6 not in '>=3.11'`
 
-macOS ships Python 3.9.6 (Xcode CLT). Bare `pip` often points at that interpreter even when `python3 --version` is 3.10+. `make install` creates a repo-root `.venv` with the first working Python ≥ 3.10 it finds (or `uv` if present).
+macOS ships Python 3.9.6 (Xcode CLT). Bare `pip` often points at that interpreter even when `python3 --version` is 3.11+. `make install` creates a repo-root `.venv` with the first working Python ≥ 3.11 it finds (or `uv` if present).
 
 ```bash
 make install
@@ -45,7 +45,7 @@ uv python install 3.12
 make install PYTHON=python3.12
 ```
 
-Requires Python ≥ 3.10 (3.11+ recommended — `ruff` targets py310). Check with `python3 --version`.
+Requires Python ≥ 3.11. Check with `python3 --version`.
 
 ---
 

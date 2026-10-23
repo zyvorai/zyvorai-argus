@@ -8,7 +8,7 @@
 [![CI](https://github.com/zyvorai/zyvorai-argus/actions/workflows/ci.yml/badge.svg)](https://github.com/zyvorai/zyvorai-argus/actions/workflows/ci.yml)
 [![Security](https://github.com/zyvorai/zyvorai-argus/actions/workflows/security.yml/badge.svg)](https://github.com/zyvorai/zyvorai-argus/actions/workflows/security.yml)
 [![License: Zyvor Production v1.0](https://img.shields.io/badge/License-Zyvor%20Production%20v1.0-blue.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab?logo=python&logoColor=white)](pyproject.toml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white)](pyproject.toml)
 [![Node 20+](https://img.shields.io/badge/node-20%2B-339933?logo=node.js&logoColor=white)](package.json)
 [![TypeScript](https://img.shields.io/badge/typescript-Playwright-3178c6?logo=typescript&logoColor=white)](playwright/)
 
@@ -129,7 +129,7 @@ Command reference: [docs/test-authoring.md](docs/test-authoring.md).
 
 ## Quickstart
 
-Requires Python 3.10+, Node 20+, and Docker (only for the container path). `make install` handles the rest, including Playwright's Chromium download.
+Requires Python 3.11+, Node 20+, and Docker (only for the container path). `make install` handles the rest, including Playwright's Chromium download.
 
 ```bash
 git clone https://github.com/zyvorai/zyvorai-argus.git && cd argus
