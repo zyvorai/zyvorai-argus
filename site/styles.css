@@ -82,3 +82,5 @@ section.alt .card,section.alt .plan{background:var(--bg)}
 .eyebrow{display:inline-flex;align-items:center;gap:.5rem}
 .eyebrow::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
 h2{font-weight:700;letter-spacing:-.03em}
+.grid.duo{grid-template-columns:repeat(2,1fr)}
+@media(max-width:760px){.grid.duo{grid-template-columns:1fr}}
