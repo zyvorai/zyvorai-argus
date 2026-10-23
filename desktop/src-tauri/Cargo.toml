@@ -1,6 +1,6 @@
 [package]
 name = "zyvor-argus-desktop"
-version = "0.1.1"
+version = "0.1.2"
 description = "Zyvor Argus — native desktop shell around `argus serve`"
 edition = "2021"
 
