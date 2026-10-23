@@ -50,4 +50,12 @@ footer{border-top:1px solid var(--border);padding:2.5rem 0;color:var(--muted);fo
 footer .cols{display:flex;gap:2rem;flex-wrap:wrap;justify-content:space-between}footer a{color:var(--muted)}
 .rv{opacity:0;transform:translateY(14px);transition:opacity .6s,transform .6s}.rv.in{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}html{scroll-behavior:auto}.rv{opacity:1;transform:none}}
+.plans{display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem}
+.plan{display:flex;flex-direction:column;gap:.5rem;background:var(--bg);border:1px solid var(--border);border-radius:18px;padding:1.6rem}
+.plan.hi{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.plan h3{margin:0;font-size:1.15rem}.plan p{margin:0;color:var(--muted);font-size:.98rem}
+.plan .rate{color:var(--text);font-weight:600}.plan .cov{margin-top:auto;padding-top:.6rem}.plan .btn{text-align:center;margin-top:.8rem}
+.fine{max-width:48rem;margin:1.75rem auto 0;text-align:center;color:var(--muted);font-size:.88rem}
+@media(max-width:1100px){.plans{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.plans{grid-template-columns:1fr}}
 @media(max-width:900px){.grid,.steps,.tut{grid-template-columns:1fr}.nav a.l.hide{display:none}}
