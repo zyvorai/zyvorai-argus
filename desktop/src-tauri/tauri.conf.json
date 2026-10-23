@@ -39,6 +39,7 @@
     "category": "DeveloperTool",
     "shortDescription": "Native desktop shell for the Zyvor Argus Mission Control dashboard",
     "longDescription": "Zyvor Argus Desktop wraps `argus serve` in a native macOS window — no browser tab needed. All test execution, reporting, and dashboard functionality is unchanged; this is a thin shell, not a reimplementation.",
+    "resources": { "stage/argus": "argus", "stage/node": "node" },
     "macOS": {
       "minimumSystemVersion": "11.0"
     }

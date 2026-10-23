@@ -85,6 +85,24 @@ fn dev_checkout_bin() -> Option<PathBuf> {
     candidate.is_file().then_some(candidate)
 }
 
+/// The PyInstaller onedir sidecar shipped inside the .app
+/// (`<Resources>/argus/argus`).
+pub fn bundled_bin(resource_dir: Option<&Path>) -> Option<PathBuf> {
+    let candidate = resource_dir?.join("argus").join("argus");
+    candidate.is_file().then_some(candidate)
+}
+
+/// Writable workspace for a bundled app (see orchestrator/paths.py
+/// `ensure_workspace`): reports, history and generated tests land here.
+pub fn bundled_workspace() -> PathBuf {
+    app_data_dir().join("workspace")
+}
+
+/// Playwright browsers are downloaded here on first run, not shipped.
+pub fn browsers_dir() -> PathBuf {
+    app_data_dir().join("browsers")
+}
+
 fn path_lookup_bin() -> Option<PathBuf> {
     let name = if cfg!(target_os = "windows") {
         "argus.exe"
@@ -122,11 +140,14 @@ pub fn working_dir() -> PathBuf {
 /// Resolution order: explicit settings override -> dev checkout's `.venv`
 /// -> `argus` on PATH -> bare `"argus"` (last resort; spawning it will
 /// fail with a clear "not found" error the UI can surface).
-pub fn resolve_argus_bin(settings_override: Option<&str>) -> PathBuf {
+pub fn resolve_argus_bin(settings_override: Option<&str>, resource_dir: Option<&Path>) -> PathBuf {
     if let Some(b) = settings_override {
         if !b.is_empty() && Path::new(b).is_file() {
             return PathBuf::from(b);
         }
+    }
+    if let Some(b) = bundled_bin(resource_dir) {
+        return b;
     }
     if let Some(b) = dev_checkout_bin() {
         return b;
@@ -159,13 +180,13 @@ mod tests {
     fn resolve_prefers_explicit_override_when_it_exists() {
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let this_file = manifest_dir.join("Cargo.toml");
-        let resolved = resolve_argus_bin(Some(this_file.to_str().unwrap()));
+        let resolved = resolve_argus_bin(Some(this_file.to_str().unwrap()), None);
         assert_eq!(resolved, this_file);
     }
 
     #[test]
     fn resolve_ignores_a_nonexistent_override() {
-        let resolved = resolve_argus_bin(Some("/definitely/not/a/real/path/argus"));
+        let resolved = resolve_argus_bin(Some("/definitely/not/a/real/path/argus"), None);
         // Falls through to the next tier rather than returning the bogus path.
         assert_ne!(resolved, PathBuf::from("/definitely/not/a/real/path/argus"));
     }

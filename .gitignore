@@ -47,3 +47,5 @@ test-results/
 traces/
 videos/
 .zyvor-argus/
+
+desktop/src-tauri/stage/

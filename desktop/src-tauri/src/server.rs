@@ -18,7 +18,7 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
-const READY_TIMEOUT: Duration = Duration::from_secs(20);
+const READY_TIMEOUT: Duration = Duration::from_secs(60);
 const POLL_INTERVAL: Duration = Duration::from_millis(150);
 
 pub enum ServerStatus {
@@ -75,10 +75,11 @@ fn wait_for_port(port: u16, timeout: Duration) -> bool {
     false
 }
 
-fn spawn_serve(bin_override: Option<&str>) -> Result<(Child, u16), String> {
-    let bin = paths::resolve_argus_bin(bin_override);
+fn spawn_serve(bin_override: Option<&str>, resource_dir: Option<std::path::PathBuf>) -> Result<(Child, u16), String> {
+    let bin = paths::resolve_argus_bin(bin_override, resource_dir.as_deref());
+    let bundled = paths::bundled_bin(resource_dir.as_deref()).is_some_and(|b| b == bin);
     let port = free_port()?;
-    let working_dir = paths::working_dir();
+    let working_dir = if bundled { paths::bundled_workspace() } else { paths::working_dir() };
     std::fs::create_dir_all(&working_dir).ok();
 
     // 127.0.0.1, not `serve`'s own CLI default of 0.0.0.0 — a desktop app
@@ -100,6 +101,20 @@ fn spawn_serve(bin_override: Option<&str>) -> Result<(Child, u16), String> {
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    if bundled {
+        // Read-only .app: give the backend a writable workspace and a
+        // browsers dir for the first-run Chromium download.
+        // Bundled Node (for Playwright) goes first on PATH.
+        if let Some(dir) = resource_dir.as_deref() {
+            let node_bin = dir.join("node");
+            if node_bin.is_dir() {
+                let old = std::env::var("PATH").unwrap_or_default();
+                cmd.env("PATH", format!("{}:{old}", node_bin.display()));
+            }
+        }
+        cmd.env("ZYVOR_HOME", &working_dir)
+            .env("PLAYWRIGHT_BROWSERS_PATH", paths::browsers_dir());
+    }
 
     let mut child = cmd.spawn().map_err(|e| {
         format!(
@@ -162,7 +177,7 @@ pub fn start_in_background(
             state.set_status(ServerStatus::Ready { url: normalized });
             return;
         }
-        match spawn_serve(bin_override.as_deref()) {
+        match spawn_serve(bin_override.as_deref(), app_handle.path().resource_dir().ok()) {
             Ok((child, port)) => {
                 if wait_for_port(port, READY_TIMEOUT) {
                     if let Ok(mut guard) = state.handle.lock() {
