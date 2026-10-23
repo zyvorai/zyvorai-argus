@@ -2408,4 +2408,6 @@ setRefreshRate(parseInt($("refresh-rate").value, 10) || REFRESH);
 
 
 document.getElementById("topbar-palette")?.addEventListener("click", () => openPalette());
+
+{% include 'dashboard/target_switcher.html.j2' %}
 </script>

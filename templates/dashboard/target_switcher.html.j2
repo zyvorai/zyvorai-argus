@@ -1,0 +1,68 @@
+/* multi-target switcher: saved base URLs; picking one fills the URL inputs
+   across every panel that are empty or still hold the previous target. */
+(function () {
+  const KEY = "zyvor-targets", ACTIVE = "zyvor-target-active";
+  // URL inputs that take a site/app base URL (not a specific path or webhook)
+  const EXCLUDE = new Set(["inj-url", "csrf-url", "ssrf-url", "idor-url", "cw-start-url", "cw-stop-url", "aas-login", "rt-ws", "api-spec", "cmp-a", "cmp-b"]);
+  const sel = $("target-switch"), dlg = $("target-dialog");
+  if (!sel || !dlg) return;
+  const load = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || "[]"); return Array.isArray(v) ? v.filter((t) => t && t.name && t.url) : []; } catch (e) { return []; } };
+  const save = (list) => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {} };
+  const getActive = () => { try { return localStorage.getItem(ACTIVE) || ""; } catch (e) { return ""; } };
+  const setActive = (n) => { try { localStorage.setItem(ACTIVE, n); } catch (e) {} };
+  const urlInputs = () => Array.from(document.querySelectorAll("input.inp")).filter((el) =>
+    el.id && !EXCLUDE.has(el.id) && (/-url$/.test(el.id) || el.id === "api-url" || el.id === "pr-target" || el.id === "lr-baseurl"));
+  let applied = "";
+
+  function apply(name) {
+    const list = load(), t = list.find((x) => x.name === name);
+    const next = t ? t.url : "";
+    let n = 0;
+    for (const el of urlInputs()) {
+      if (el.value.trim() === "" || el.value.trim() === applied) { el.value = next; n++; }
+    }
+    applied = next;
+    setActive(t ? t.name : "");
+    if (t) toast("target", true, t.name + " → " + n + " field" + (n === 1 ? "" : "s") + " filled");
+  }
+  function render() {
+    const list = load(), cur = getActive();
+    sel.innerHTML = '<option value="">No target</option>'
+      + list.map((t) => '<option value="' + esc(t.name) + '">' + esc(t.name) + "</option>").join("")
+      + '<option value="__manage">Manage targets…</option>';
+    sel.value = list.some((t) => t.name === cur) ? cur : "";
+  }
+  function renderList() {
+    const list = load();
+    $("target-list").innerHTML = list.length ? list.map((t) =>
+      '<li><span><b>' + esc(t.name) + '</b> <span class="d">' + esc(t.url) + '</span></span>'
+      + '<button type="button" class="dl-btn" data-del="' + esc(t.name) + '" aria-label="Remove target ' + esc(t.name) + '">remove</button></li>').join("")
+      : '<li class="d">No saved targets yet.</li>';
+  }
+  sel.addEventListener("change", () => {
+    if (sel.value === "__manage") { renderList(); dlg.showModal(); $("target-name").focus(); sel.value = getActive(); return; }
+    apply(sel.value);
+  });
+  $("target-list").addEventListener("click", (ev) => {
+    const name = ev.target.getAttribute && ev.target.getAttribute("data-del");
+    if (!name) return;
+    save(load().filter((t) => t.name !== name));
+    if (getActive() === name) setActive("");
+    renderList(); render();
+  });
+  $("target-form").addEventListener("submit", (ev) => {
+    const name = $("target-name").value.trim(), url = $("target-url").value.trim();
+    const err = $("target-err");
+    if (ev.submitter && ev.submitter.value === "close") return;
+    ev.preventDefault();
+    if (!name || !/^https?:\/\/[^\s/]+/i.test(url)) { err.textContent = "Enter a name and an http(s):// URL."; return; }
+    err.textContent = "";
+    const list = load().filter((t) => t.name !== name);
+    list.push({ name: name.slice(0, 40), url: url.replace(/\/+$/, "") });
+    save(list);
+    $("target-name").value = ""; $("target-url").value = "";
+    renderList(); render();
+  });
+  render();
+  if (sel.value) apply(sel.value);
+})();

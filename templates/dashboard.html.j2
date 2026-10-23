@@ -109,12 +109,27 @@
     <span class="kl-dot" aria-hidden="true"></span>
     <span id="knowledge-lamp-label">Knowledge offline</span>
   </span>
+  <label class="sr-only" for="target-switch">Active target</label>
+  <select class="inp target-switch" id="target-switch" title="Active target: fills the URL fields in every panel"></select>
   <button type="button" class="theme-btn" id="theme-toggle" aria-label="Switch to light theme" title="Switch to light theme">
     <svg class="icon-moon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 1.5a6 6 0 1 0 6 6 4.5 4.5 0 0 1-6-6z"/></svg>
     <svg class="icon-sun" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.05 3.05l1.06 1.06M11.9 11.9l1.06 1.06M3.05 12.95l1.06-1.06M11.9 4.1l1.06-1.06"/></svg>
   </button>
   <button type="button" class="run-btn primary" id="topbar-palette">Search</button>
 </header>
+<dialog id="target-dialog" class="target-dialog" aria-labelledby="target-title">
+  <form id="target-form" method="dialog">
+    <h2 id="target-title">Targets</h2>
+    <p class="d">Save the apps you test. Choosing one fills the URL fields across panels.</p>
+    <ul id="target-list" class="target-list"></ul>
+    <div class="act-row">
+      <label class="sr-only" for="target-name">Name</label><input class="inp" id="target-name" placeholder="name (e.g. staging)" maxlength="40" autocomplete="off">
+      <label class="sr-only" for="target-url">URL</label><input class="inp grow" id="target-url" placeholder="https://staging.example.com" autocomplete="off">
+    </div>
+    <div id="target-err" class="d" role="alert" style="color:var(--status-error)"></div>
+    <div class="act-row"><button class="dl-btn" type="submit" value="save">＋ Save target</button><button class="dl-btn" type="submit" value="close" formnovalidate>Close</button></div>
+  </form>
+</dialog>
 <div class="panel-viewport">
 
 {% include 'dashboard/panel_overview.html.j2' %}
