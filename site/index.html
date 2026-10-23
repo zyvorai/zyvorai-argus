@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Argus — Autonomous QA for the real world</title><meta name="description" content="Specs in. Tests out. Know what broke. Argus reads requirements, generates Playwright tests, runs them on every deploy and shows what broke in Mission Control.">
+<meta property="og:title" content="Argus — Autonomous QA for the real world"><meta property="og:description" content="Specs in. Tests out. Know what broke. Argus reads requirements, generates Playwright tests, runs them on every deploy and shows what broke in Mission Control.">
+<meta property="og:image" content="assets/argus-share-card.png"><meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#1d1d1f">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230071e3'/%3E%3Ctext x='16' y='23' font-size='20' font-family='sans-serif' font-weight='700' text-anchor='middle' fill='white'%3EA%3C/text%3E%3C/svg%3E"><link rel="stylesheet" href="styles.css"></head><body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="nav"><div class="wrap"><a class="brand" href="index.html">Argus</a>
+<a class="l hide" href="index.html#how">How it works</a><a class="l hide" href="index.html#features">Features</a>
+<a class="l hide" href="index.html#vs">Compare</a><a class="l" href="tutorials.html">Tutorials</a>
+<a class="l" href="https://github.com/zyvorai/zyvorai-argus">GitHub</a>
+<button class="icon" id="theme" type="button" aria-label="Toggle light or dark theme">◐</button></div></header>
+<main id="main">
+<div class="wrap hero"><p class="eyebrow">Autonomous QA for the real world</p>
+<h1>Specs in. Tests out.<br><span>Know what broke.</span></h1>
+<p class="lead">Argus reads your requirements, scores them, generates Playwright tests, runs them on every deploy, and shows what broke — in Mission Control, a live ops console.</p>
+<div class="cta"><a class="btn" href="#quickstart">First green run — no API key</a><a class="btn ghost" href="https://zyvor.dev/schedule?utm_source=github&utm_medium=argus&utm_campaign=pages_hero">Book a demo</a><a class="btn ghost" href="https://zyvor.dev/poc?utm_source=github&utm_medium=argus&utm_campaign=pages_hero">30-day PoC</a></div>
+<div class="proof"><span class="chip">Requirements traced to tests</span><span class="chip">Playwright under the hood</span><span class="chip">Self-healing autofix</span><span class="chip">CLI · dashboard · GitHub Action · MCP</span></div>
+<div class="media" style="background:#000 url(assets/argus-hero-dark.jpg) center/cover;aspect-ratio:16/9"><video autoplay muted loop playsinline preload="metadata" poster="assets/argus-hero-dark.jpg" aria-label="Mission Control demo">
+<source src="assets/zyvor-dev-mission-control-demo.webm" type="video/webm"><source src="assets/zyvor-dev-mission-control-demo.mp4" type="video/mp4"></video></div></div>
+<section id="how" class="alt"><div class="wrap"><h2>How it fits together</h2><p class="sub">From a spec to a trusted signal on every deploy.</p>
+<ol class="steps" style="padding:0"><li class="rv"><h3>Ingest</h3><p>Requirements from docs, Jira, email or transcripts are parsed, versioned and scored.</p></li>
+<li class="rv"><h3>Generate &amp; run</h3><p>Playwright specs are generated, executed on every deploy, and failures are triaged.</p></li>
+<li class="rv"><h3>See &amp; fix</h3><p>Mission Control shows what broke; autofix proposes repairs and re-runs.</p></li></ol>
+<img class="shot rv" style="margin-top:2rem" src="assets/readme-how-it-works.jpg" alt="Argus architecture: requirements to pipeline to Mission Control" loading="lazy"></div></section>
+<section id="features"><div class="wrap"><h2>Everything QA, one console</h2><p class="sub">Requirements, testing, contracts and security — without five separate products.</p>
+<div class="grid"><div class="card rv"><h3>Requirements traced to tests</h3><p>Versioned, scored requirements; every generated test links back to a requirement version.</p></div><div class="card rv"><h3>One pipeline</h3><p>The same LangGraph path from the CLI or a single dashboard click.</p></div><div class="card rv"><h3>Self-healing autofix</h3><p>Suggests and applies selector repairs, then re-runs.</p></div><div class="card rv"><h3>Contracts</h3><p>OpenAPI contract tests, breaking-change diff and HAR consumer verify.</p></div><div class="card rv"><h3>Authorized security</h3><p>Misconfig, CVE, SCA, DAST, LLM red-team and chaos jobs with an audit trail.</p></div><div class="card rv"><h3>Mission Control</h3><p>Console, Testing, Security and Operations in one rail, with ⌘K search and a live job terminal.</p></div><div class="card rv"><h3>Test intelligence</h3><p>Flake taxonomy, quarantine with TTL and owner, change-based test selection.</p></div><div class="card rv"><h3>Ask Zyra</h3><p>Citation-first knowledge Q&amp;A over your docs, with on-box embeddings available.</p></div><div class="card rv"><h3>Integrations</h3><p>GitHub Action, Jira, Slack, CRM golden-path packs, MCP server and a macOS desktop app.</p></div></div>
+<img class="shot rv" style="margin-top:2rem" src="assets/readme-capabilities.jpg" alt="Capabilities at a glance: Requirements, Testing, Contracts, Security" loading="lazy"></div></section>
+<section id="vs" class="alt"><div class="wrap"><h2>Argus vs a hand-written Playwright suite</h2><p class="sub">Keep Playwright, lose the busywork. Choose plain Playwright if you have a small, stable suite your engineers already own.</p>
+<div class="tbl"><table><thead><tr><th></th><th>Argus</th><th>Hand-written suite in CI</th></tr></thead><tbody><tr><td><strong>Where tests come from</strong></td><td class='y'>Generated as <code>.spec.ts</code> from versioned, scored requirements</td><td>Written and maintained by hand</td></tr><tr><td><strong>Spec traceability</strong></td><td class='y'>Every test linked to a requirement version</td><td>By convention, if at all</td></tr><tr><td><strong>Broken selectors</strong></td><td class='y'>Autofix suggests and applies a repair, then re-runs</td><td>Fixed by hand</td></tr><tr><td><strong>Flaky tests</strong></td><td class='y'>Taxonomy, quarantine with TTL, change-based selection</td><td>Retries and manual triage</td></tr><tr><td><strong>API contracts</strong></td><td class='y'>OpenAPI contract test, breaking-change diff, HAR verify</td><td>Separate tooling</td></tr><tr><td><strong>Security checks</strong></td><td class='y'>Authorized, engagement-gated jobs with an audit trail</td><td>Separate tooling</td></tr><tr><td><strong>Results</strong></td><td class='y'>Mission Control with live job terminal</td><td>HTML report per run</td></tr></tbody></table></div></div></section>
+<section id="quickstart"><div class="wrap"><h2>Quickstart</h2><p class="sub">Python 3.11+, Node 20+. <code>make install</code> handles the rest, including Chromium.</p>
+<div class="code"><button type="button" data-copy="qs">Copy</button><pre id="qs">git clone https://github.com/zyvorai/zyvorai-argus.git &amp;&amp; cd zyvorai-argus
+cp .env.example .env          # set ZYVOR_BASE_URL
+make install                    # Python venv + Playwright Chromium
+argus test exec --grep @smoke   # first green run — no API key
+argus serve --port 8080         # → http://localhost:8080/dashboard</pre></div>
+<p style="text-align:center;margin-top:1.5rem"><a href="tutorials.html">19 hands-on tutorials →</a></p></div></section>
+<section class="alt"><div class="wrap" style="text-align:center"><h2>Know what broke before your customers do</h2>
+<p class="sub">Free for non-production use. Talk to us about production.</p><div class="cta"><a class="btn" href="https://zyvor.dev/schedule?utm_source=github&utm_medium=argus&utm_campaign=pages_hero">Book a demo</a><a class="btn ghost" href="https://github.com/zyvorai/zyvorai-argus">View on GitHub</a></div></div></section>
+</main><footer><div class="wrap"><div class="cols">
+<div><strong>Argus</strong> by Zyvor<br>Copyright © 2026 ZyvorAI Labs Private Limited.</div>
+<div>Source-available under the <a href="https://github.com/zyvorai/zyvorai-argus/blob/main/LICENSE">Zyvor Production License v1.0</a>.<br>Free for development, testing and non-production use; production use needs a <a href="https://zyvor.dev/?utm_source=github&amp;utm_medium=argus&amp;utm_campaign=pages_footer">commercial license</a>.</div>
+<div><a href="https://github.com/zyvorai/zyvorai-argus">GitHub</a> · <a href="https://github.com/zyvorai/zyvorai-argus/blob/main/CHANGELOG.md">Changelog</a> · <a href="https://github.com/zyvorai/zyvorai-argus/blob/main/SECURITY.md">Security</a> · <a href="https://zyvor.dev">zyvor.dev</a></div>
+</div></div></footer><script src="app.js"></script></body></html>
