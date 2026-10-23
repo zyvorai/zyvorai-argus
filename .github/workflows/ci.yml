@@ -50,6 +50,45 @@ jobs:
             node --check "$f"
           done
 
+  dashboard-a11y:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          pip install -e .
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Start Mission Control
+        run: |
+          argus serve --port 8080 > serve.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fs http://127.0.0.1:8080/dashboard -o /dev/null && exit 0
+            sleep 2
+          done
+          cat serve.log
+          exit 1
+
+      - name: Axe and keyboard check (light and dark)
+        run: ARGUS_BASE_URL=http://127.0.0.1:8080 node scripts/e2e-dashboard-a11y.mjs
+
+      - name: Server log
+        if: failure()
+        run: cat serve.log
+
   docs-and-manifests:
     runs-on: ubuntu-latest
     timeout-minutes: 10
