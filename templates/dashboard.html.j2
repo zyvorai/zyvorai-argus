@@ -6,7 +6,10 @@
 <title>Zyvor Mission Control</title>
 <script>
 (function () {
-  var t = localStorage.getItem("zyvor-theme");
+  var t = null;
+  try { t = localStorage.getItem("zyvor-theme"); } catch (e) {}
+  // No saved choice: follow the OS preference (dark remains the fallback).
+  if (!t && window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches) t = "light";
   document.documentElement.setAttribute("data-theme", t === "light" ? "light" : "dark");
 })();
 </script>
@@ -19,7 +22,7 @@
     --rail-bg: #161617;
     --text: #f5f5f7;
     --text-secondary: #a1a1a6;
-    --text-muted: #86868b;
+    --text-muted: #a1a1a6;
     --border: #424245;
     --accent: #2997ff;
     --accent-hover: #0077ed;
@@ -65,12 +68,12 @@
     --rail-bg: #f5f5f7;
     --text: #1d1d1f;
     --text-secondary: #6e6e73;
-    --text-muted: #86868b;
+    --text-muted: #6e6e73;
     --border: #d2d2d7;
     --accent: #0071e3;
     --accent-hover: #0077ed;
     --status-ok: #34c759;
-    --status-warn: #ff9500;
+    --status-warn: #b45309;
     --status-error: #ff3b30;
     --status-info: #0071e3;
     --hover-bg: rgba(0,0,0,0.04);
@@ -302,6 +305,7 @@
   .run-btn:hover:not(:disabled) { border-color: var(--text-muted); background: var(--btn-hover-bg); }
   .run-btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .run-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  [data-theme="dark"] .run-btn.primary { background: #0071e3; border-color: #0071e3; }
   .run-btn.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
 
   .theme-btn {
@@ -575,6 +579,9 @@
     .status-bar { padding: 12px 18px; }
   }
 
+  .skip-link { position: absolute; left: 12px; top: -48px; z-index: 10000; padding: 10px 16px; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; text-decoration: none; }
+  .skip-link:focus { top: 12px; }
+  #main-content:focus { outline: none; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
     .panel { animation: none; }
@@ -582,6 +589,7 @@
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
 
 <div class="rail-overlay" id="rail-overlay" aria-hidden="true"></div>
 <div class="app">
@@ -660,7 +668,7 @@
     </button>
   </div>
 </aside>
-<div class="main-column">
+<div class="main-column" id="main-content" tabindex="-1">
 <header class="global-header">
   <button type="button" class="menu-btn" id="menu-btn" aria-label="Open navigation">☰</button>
   <a class="zyvor-mark header-mark" href="https://zyvor.dev/" target="_blank" rel="noopener noreferrer" aria-label="Zyvor home">
@@ -1712,7 +1720,7 @@
     <span><kbd>esc</kbd> close</span>
     <span><button class="dl-btn" id="sound-toggle" style="padding:1px 8px"></button></span>
     <span>auto-refresh
-      <select class="inp" id="refresh-rate" style="padding:4px 8px;font-size:0.85rem">
+      <select class="inp" id="refresh-rate" aria-label="Auto-refresh interval" style="padding:4px 8px;font-size:0.85rem">
         <option value="5000">5s</option>
         <option value="15000">15s</option>
         <option value="60000">60s</option>
@@ -1729,8 +1737,8 @@
     <button class="close" id="drawer-close" aria-label="Close">✕</button>
   </header>
   <div class="drawer-controls">
-    <select class="inp" id="drawer-container"><option value="">all containers</option></select>
-    <select class="inp" id="drawer-lines">
+    <select class="inp" id="drawer-container" aria-label="Container"><option value="">all containers</option></select>
+    <select class="inp" id="drawer-lines" aria-label="Log lines to show">
       <option value="100">100 lines</option>
       <option value="500">500 lines</option>
       <option value="1000">1000 lines</option>
@@ -1745,9 +1753,10 @@
 <div id="toasts" aria-live="polite"></div>
 
 <div id="palette" style="display:none">
-  <div class="palette-box glass">
-    <input id="palette-input" class="inp" placeholder="Run a command…  (↑↓ to move, ↵ to run, esc to close)" autocomplete="off">
-    <div id="palette-list"></div>
+  <div class="palette-box glass" role="dialog" aria-modal="true" aria-label="Command palette">
+    <input id="palette-input" class="inp" placeholder="Run a command…  (↑↓ to move, ↵ to run, esc to close)" autocomplete="off"
+           role="combobox" aria-label="Search commands" aria-expanded="true" aria-controls="palette-list" aria-autocomplete="list">
+    <div id="palette-list" role="listbox" aria-label="Commands"></div>
   </div>
 </div>
 <script>
@@ -1795,10 +1804,10 @@ if (localStorage.getItem("zyvor-rail-collapsed") === "1") applyRailCollapsed(tru
 $("rail-collapse")?.addEventListener("click", toggleRailCollapsed);
 
 /* Theme toggle (dark default, Apple-style) */
-function applyTheme(theme) {
+function applyTheme(theme, persist) {
   theme = theme === "light" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", theme);
-  localStorage.setItem("zyvor-theme", theme);
+  if (persist) { try { localStorage.setItem("zyvor-theme", theme); } catch (e) {} }
   var btn = $("theme-toggle");
   if (btn) {
     var label = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
@@ -1808,10 +1817,10 @@ function applyTheme(theme) {
 }
 function toggleTheme() {
   var next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
-  applyTheme(next);
+  applyTheme(next, true);
 }
 $("theme-toggle")?.addEventListener("click", toggleTheme);
-applyTheme(document.documentElement.getAttribute("data-theme") || "dark");
+applyTheme(document.documentElement.getAttribute("data-theme") || "dark", false);
 
 /* Side-rail panel navigation */
 const PANELS = ["overview", "pipeline", "visual", "quality", "probes", "requirements", "journeys", "api", "security", "operations", "ask"];
@@ -1837,7 +1846,9 @@ function showPanel(id, opts) {
     if (el) el.classList.toggle("is-active", p === id);
   });
   document.querySelectorAll(".side-rail [data-panel]").forEach(function (el) {
-    el.classList.toggle("is-active", el.dataset.panel === id);
+    var active = el.dataset.panel === id;
+    el.classList.toggle("is-active", active);
+    if (active) el.setAttribute("aria-current", "page"); else el.removeAttribute("aria-current");
   });
   if (location.hash.slice(1) !== id) history.replaceState(null, "", "#" + id);
   document.body.classList.remove("rail-open");
@@ -2700,20 +2711,47 @@ const PALETTE_CMDS = [
   { label: "Show cluster events", action: () => { showPanel("overview"); if (!eventsOpen) $("events-toggle").click(); } },
   { label: "Show recorded videos", action: () => { showPanel("operations"); if (!videosOpen) $("videos-toggle").click(); } },
 ];
-let palSel = 0, palFiltered = PALETTE_CMDS;
+let palSel = 0, palFiltered = PALETTE_CMDS, palOpener = null;
+const PAL_RECENT_KEY = "zyvor-palette-recent";
+function palRecents() {
+  try { return JSON.parse(localStorage.getItem(PAL_RECENT_KEY) || "[]"); } catch (e) { return []; }
+}
+function palRemember(label) {
+  try {
+    var r = palRecents().filter(function (l) { return l !== label; });
+    r.unshift(label);
+    localStorage.setItem(PAL_RECENT_KEY, JSON.stringify(r.slice(0, 5)));
+  } catch (e) {}
+}
 function openPalette() {
+  palOpener = document.activeElement;
   $("palette").style.display = "flex";
   $("palette-input").value = ""; palSel = 0; renderPalette();
   $("palette-input").focus();
 }
-function closePalette() { $("palette").style.display = "none"; }
+function closePalette() {
+  $("palette").style.display = "none";
+  if (palOpener && palOpener.focus && document.contains(palOpener)) palOpener.focus();
+  palOpener = null;
+}
 function renderPalette() {
   const q = $("palette-input").value.toLowerCase();
   palFiltered = PALETTE_CMDS.filter((c) => c.label.toLowerCase().includes(q));
+  const recent = q ? [] : palRecents();
+  if (recent.length) {
+    // Empty query: surface recently used commands first.
+    const rank = (c) => { const i = recent.indexOf(c.label); return i === -1 ? recent.length : i; };
+    palFiltered = palFiltered.map((c, i) => ({ c, i })).sort((a, b) => rank(a.c) - rank(b.c) || a.i - b.i).map((x) => x.c);
+  }
   if (palSel >= palFiltered.length) palSel = 0;
   $("palette-list").innerHTML = palFiltered.map((c, i) =>
-    '<div class="palette-item ' + (i === palSel ? "sel" : "") + '" data-i="' + i + '">'
-    + esc(c.label) + (c.kind ? '<span class="pk">action</span>' : '<span class="pk">view</span>') + "</div>").join("");
+    '<div class="palette-item ' + (i === palSel ? "sel" : "") + '" data-i="' + i + '" role="option" id="pal-opt-' + i
+    + '" aria-selected="' + (i === palSel ? "true" : "false") + '">'
+    + esc(c.label)
+    + (recent.indexOf(c.label) !== -1 ? '<span class="pk">recent</span>' : (c.kind ? '<span class="pk">action</span>' : '<span class="pk">view</span>'))
+    + "</div>").join("");
+  if (palFiltered.length) $("palette-input").setAttribute("aria-activedescendant", "pal-opt-" + palSel);
+  else $("palette-input").removeAttribute("aria-activedescendant");
   for (const el of $("palette-list").querySelectorAll(".palette-item"))
     el.addEventListener("click", () => runPalette(parseInt(el.dataset.i, 10)));
 }
@@ -2721,6 +2759,7 @@ function runPalette(i) {
   const cmd = palFiltered[i];
   closePalette();
   if (!cmd) return;
+  palRemember(cmd.label);
   if (cmd.kind) startJob(cmd.kind);
   else if (cmd.action) cmd.action();
 }
@@ -2730,6 +2769,7 @@ $("palette-input").addEventListener("keydown", (ev) => {
   else if (ev.key === "ArrowUp") { palSel = Math.max(palSel - 1, 0); renderPalette(); ev.preventDefault(); }
   else if (ev.key === "Enter") runPalette(palSel);
   else if (ev.key === "Escape") closePalette();
+  else if (ev.key === "Tab") ev.preventDefault(); // modal: keep focus in the palette
 });
 $("palette").addEventListener("click", (ev) => { if (ev.target.id === "palette") closePalette(); });
 

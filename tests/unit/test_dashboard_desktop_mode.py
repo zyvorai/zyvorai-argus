@@ -37,3 +37,17 @@ def test_workloads_panel_visible_by_default(monkeypatch):
     # in the page unrelated to this section, e.g. the events panel).
     workloads_section = response.text.split('id="workloads"')[0].splitlines()[-1]
     assert "display:none" not in workloads_section
+
+
+def test_dashboard_accessibility_landmarks(monkeypatch):
+    """Skip link, labelled modal palette and OS-theme-aware default."""
+    monkeypatch.delenv("ZYVOR_DESKTOP_MODE", raising=False)
+    client = TestClient(create_app())
+
+    html = client.get("/dashboard").text
+
+    assert 'href="#main-content"' in html and 'id="main-content"' in html
+    assert 'role="dialog" aria-modal="true" aria-label="Command palette"' in html
+    assert 'role="combobox"' in html and 'role="listbox"' in html
+    assert "aria-current" in html
+    assert "prefers-color-scheme: light" in html
