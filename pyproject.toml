@@ -46,12 +46,18 @@ dev = [
 knowledge = [
     "langchain==1.4.6",
     "langchain-openai==1.7.2",
-    "langchain-qdrant[fastembed]==1.1.0",
+    "langchain-qdrant==1.1.0",
     "langchain-text-splitters>=1.0.0,<2.0.0",
     "qdrant-client>=1.15.1,<2.0.0",
     "langgraph-checkpoint-sqlite>=2.0,<4.0",
     "pypdf>=5.0.0,<7.0.0",
     "orjson>=3.10.0,<4.0.0",
+]
+# Local embeddings + BM25 sparse vectors for hybrid retrieval. Split out because
+# fastembed pins pillow<13, which cannot resolve against the Pillow>=13 core
+# floor (35 CVEs fixed in 13.0.0). Installing this extra downgrades Pillow.
+fastembed = [
+    "langchain-qdrant[fastembed]==1.1.0",
 ]
 mcp = [
     # Pinned below 2.0 — that major restructured mcp.server.fastmcp (module

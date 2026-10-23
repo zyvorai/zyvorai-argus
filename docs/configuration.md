@@ -204,7 +204,7 @@ Consumed by: `agents/discover/crawl.py`, `playwright/scripts/crawl-site.mjs`, `p
 
 ### Knowledge RAG (optional Ask Zyra)
 
-Requires Python **3.11 or 3.12**, `pip install -e ".[knowledge]"`, and a running Qdrant. Mission Control shows **Ask Zyra**; API clients use `POST /v1/qa`.
+Requires Python **3.11 or 3.12**, `pip install -e ".[knowledge,fastembed]"` (the `fastembed` extra supplies BM25 sparse vectors for hybrid retrieval and local embeddings, and pins Pillow below 13), and a running Qdrant. Mission Control shows **Ask Zyra**; API clients use `POST /v1/qa`.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
