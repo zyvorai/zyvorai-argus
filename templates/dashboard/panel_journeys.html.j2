@@ -1,0 +1,66 @@
+<section id="panel-journeys" class="panel">
+  <div class="panel-head">
+    <h1>Journeys</h1>
+    <p>Flow tests, HAR replay, codegen import, and AI-driven exploration.</p>
+  </div>
+  <div class="acts">
+<div class="glass card act" id="action-flow" style="grid-column: 1 / -1">
+      <div class="act-title">🎬 Flow test — drive a user journey, record it end-to-end as one video</div>
+      <div class="act-row"><input class="inp grow" id="fw-url" placeholder="https://your-app.example.com"></div>
+      <div class="act-row"><textarea class="inp grow" id="fw-desc" rows="3" placeholder="Describe the journey in English, OR one step per line:&#10;go to /products&#10;click &quot;Schedule Demo&quot;&#10;assert &quot;contact&quot;"></textarea></div>
+      <div class="act-row">
+        <input class="inp grow" id="fw-user" placeholder="login user (optional)" autocomplete="off">
+        <input class="inp grow" id="fw-pass" type="password" placeholder="login password (optional)" autocomplete="off">
+        <input class="inp" id="fw-session" placeholder="reuse session (e.g. app-example-com.json)" style="max-width:260px">
+        <label class="chk"><input type="checkbox" id="fw-insecure"> self-signed TLS</label>
+        <label class="chk"><input type="checkbox" id="fw-record" checked> record video</label>
+      </div>
+      <div class="act-row" style="gap:10px">
+        <select class="inp" id="fw-browser" title="browser engine"><option value="">chromium</option><option>firefox</option><option>webkit</option></select>
+        <select class="inp" id="fw-device" title="device profile"><option value="">desktop</option><option>iPhone 14</option><option>iPhone 15 Pro</option><option>Pixel 7</option><option>iPad Pro 11</option></select>
+        <select class="inp" id="fw-throttle" title="network"><option value="">no throttle</option><option value="3g">3G</option><option value="offline">offline</option></select>
+        <button class="run-btn act-btn" data-kind="flow" style="margin-left:auto">🎬 Run journey</button>
+      </div>
+    </div>
+    
+<div class="glass card act" id="action-har" style="grid-column: 1 / -1">
+      <div class="act-title">📼 HAR record / replay — capture network, drive UI offline against it</div>
+      <div class="act-row">
+        <input class="inp grow" id="har-url" placeholder="https://…">
+        <select class="inp" id="har-mode" style="max-width:140px"><option value="record">record</option><option value="replay">replay</option></select>
+        <input class="inp grow" id="har-path" placeholder="HAR path (required for replay; auto for record)">
+      </div>
+      <div class="act-row">
+        <input class="inp grow" id="har-routes" placeholder="routes for record: / , /pricing (comma or newline)">
+        <input class="inp grow" id="har-expect" placeholder="expect text on replay (optional)">
+        <label class="chk"><input type="checkbox" id="har-fallback"> allow missing routes</label>
+        <label class="chk"><input type="checkbox" id="har-insecure"> self-signed TLS</label>
+        <button class="run-btn act-btn" data-kind="har_replay" style="margin-left:auto">📼 Run</button>
+      </div>
+    </div>
+    
+<div class="glass card act" id="action-codegen" style="grid-column: 1 / -1">
+      <div class="act-title">📥 Import codegen — paste Playwright codegen → flow steps</div>
+      <div class="act-row"><textarea class="inp grow" id="cg-script" rows="4" placeholder="Paste Playwright codegen JS/TS here (page.goto, getByRole().click, fill…)"></textarea></div>
+      <div class="act-row">
+        <input class="inp grow" id="cg-url" placeholder="https://… (required to run)">
+        <label class="chk"><input type="checkbox" id="cg-run"> run as flow</label>
+        <label class="chk"><input type="checkbox" id="cg-insecure"> self-signed TLS</label>
+        <button class="run-btn act-btn" data-kind="import_codegen" style="margin-left:auto">📥 Import</button>
+      </div>
+    </div>
+    
+<div class="glass card act" id="action-ai-test" style="grid-column: 1 / -1">
+      <div class="act-title">🤖 AI test — describe a goal, the agent drives the app itself</div>
+      <div class="act-row"><input class="inp grow" id="ai-url" placeholder="App URL, e.g. https://app.example.com"></div>
+      <div class="act-row"><textarea class="inp grow" id="ai-goal" rows="2" placeholder="Describe the goal in plain English, e.g. create a ubuntu vm with 1 vcpu and 2gb ram"></textarea></div>
+      <div class="act-row" style="gap:10px">
+        <input class="inp" id="ai-session" placeholder="reuse session (e.g. app-example-com.json)" style="max-width:260px">
+        <input class="inp" id="ai-steps" type="number" value="20" title="max steps" style="max-width:120px">
+        <label class="chk"><input type="checkbox" id="ai-insecure"> self-signed TLS</label>
+        <button class="run-btn act-btn" data-kind="ai_flow" style="margin-left:auto">🤖 Run agent</button>
+      </div>
+    </div>
+    
+  </div>
+</section>

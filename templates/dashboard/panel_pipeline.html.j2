@@ -1,0 +1,59 @@
+<section id="panel-pipeline" class="panel">
+  <div class="panel-head">
+    <h1>Pipeline</h1>
+    <p>Generate, discover, and run tests from specs or plain English.</p>
+  </div>
+  <div class="acts">
+<div class="glass card act" id="action-run-tests">
+      <div class="act-title">▶ Run tests</div>
+      <div class="act-row">
+        <select class="inp" id="run-source"><option value="local">local</option><option value="github">github</option></select>
+        <input class="inp grow" id="run-spec" placeholder="spec path (optional)" list="spec-list">
+      </div>
+      <div class="act-row">
+        <input class="inp" id="run-pr" type="number" placeholder="PR #" style="width:80px">
+        <label class="chk"><input type="checkbox" id="run-coverage"> expand coverage</label>
+      </div>
+      <div class="act-row">
+        <input class="inp grow" id="sm-grep" placeholder="grep tag (e.g. @smoke)" style="max-width:180px">
+        <input class="inp" id="sm-shard" placeholder="shard 1/2" style="max-width:100px">
+        <button class="run-btn primary act-btn" data-kind="smoke">▶ Smoke</button>
+        <button class="run-btn act-btn" data-kind="full">▶ Full pipeline</button>
+      </div>
+    </div>
+    
+<div class="glass card act" id="action-generate">
+      <div class="act-title">⚙ Generate tests</div>
+      <div class="act-row">
+        <select class="inp" id="gen-source"><option value="local">local</option><option value="github">github</option></select>
+        <input class="inp grow" id="gen-spec" placeholder="spec path (optional)" list="spec-list">
+      </div>
+      <div class="act-row"><label class="chk"><input type="checkbox" id="gen-coverage"> expand coverage</label></div>
+      <div class="act-row"><button class="run-btn act-btn" data-kind="generate">⚙ Generate</button></div>
+    </div>
+    
+<div class="glass card act" id="action-discover">
+      <div class="act-title">🔎 Discover coverage</div>
+      <div class="d" style="margin-bottom:8px">Scan repo code/docs for untested routes and pages.</div>
+      <div class="act-row">
+        <select class="inp" id="disc-source"><option value="github">github</option><option value="local">local</option></select>
+        <button class="run-btn act-btn" data-kind="discover">🔎 Discover</button>
+      </div>
+    </div>
+    
+<div class="glass card act" id="action-create">
+      <div class="act-title">✨ Create from English <span class="d" style="font-weight:400">— AI when a key is set, heuristic otherwise</span></div>
+      <div class="act-row"><textarea class="inp grow" id="nl-desc" rows="2" placeholder="e.g. Verify /vm page mentions KubeVirt migration"></textarea></div>
+      <div class="act-row" id="nl-chips" style="gap:6px">
+        <span class="chip nl-chip" style="cursor:pointer">homepage shows all products</span>
+        <span class="chip nl-chip" style="cursor:pointer">/vm mentions KubeVirt</span>
+        <span class="chip nl-chip" style="cursor:pointer">Schedule Demo button works</span>
+      </div>
+      <div class="act-row">
+        <label class="chk"><input type="checkbox" id="nl-execute"> run immediately</label>
+        <button class="run-btn act-btn" data-kind="create">✨ Create</button>
+      </div>
+    </div>
+    
+  </div>
+</section>

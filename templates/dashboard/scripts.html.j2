@@ -1,0 +1,2411 @@
+<script>
+"use strict";
+
+// Attach X-CSRF-Token to every mutating same-origin fetch() automatically,
+// so none of the call sites below need to be touched individually. The
+// token is read from the (non-HttpOnly) zyvor_qa_csrf cookie set alongside
+// the session cookie at login; see orchestrator/dashboard/auth.py.
+(function () {
+  const realFetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    const method = ((init && init.method) || "GET").toUpperCase();
+    if (method !== "GET" && method !== "HEAD") {
+      const match = document.cookie.match(/(?:^|;\s*)zyvor_qa_csrf=([^;]+)/);
+      if (match) {
+        init = init || {};
+        init.headers = Object.assign({}, init.headers, {"X-CSRF-Token": match[1]});
+      }
+    }
+    return realFetch(input, init);
+  };
+})();
+
+const REFRESH = {{ refresh_interval_ms }};
+const $ = (id) => document.getElementById(id);
+
+/* Side-rail collapse (icons-only) */
+function applyRailCollapsed(collapsed) {
+  document.body.classList.toggle("rail-collapsed", collapsed);
+  var btn = $("rail-collapse");
+  if (btn) {
+    btn.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
+    btn.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
+    var lbl = btn.querySelector(".rail-collapse-label");
+    if (lbl) lbl.textContent = collapsed ? "Expand" : "Collapse";
+  }
+}
+function toggleRailCollapsed() {
+  var next = !document.body.classList.contains("rail-collapsed");
+  localStorage.setItem("zyvor-rail-collapsed", next ? "1" : "0");
+  applyRailCollapsed(next);
+}
+if (localStorage.getItem("zyvor-rail-collapsed") === "1") applyRailCollapsed(true);
+$("rail-collapse")?.addEventListener("click", toggleRailCollapsed);
+
+/* Theme toggle (dark default, Apple-style) */
+function applyTheme(theme, persist) {
+  theme = theme === "light" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", theme);
+  if (persist) { try { localStorage.setItem("zyvor-theme", theme); } catch (e) {} }
+  var btn = $("theme-toggle");
+  if (btn) {
+    var label = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+    btn.setAttribute("aria-label", label);
+    btn.title = label;
+  }
+}
+function toggleTheme() {
+  var next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+  applyTheme(next, true);
+}
+$("theme-toggle")?.addEventListener("click", toggleTheme);
+applyTheme(document.documentElement.getAttribute("data-theme") || "dark", false);
+
+/* Side-rail panel navigation */
+const PANELS = ["overview", "pipeline", "visual", "quality", "probes", "requirements", "journeys", "api", "security", "operations", "ask"];
+const PANEL_FOR_KIND = {
+  smoke: "pipeline", full: "pipeline", generate: "pipeline", discover: "pipeline", create: "pipeline",
+  regression: "visual", compare: "visual", screenshot: "visual", route_sweep: "visual",
+  audit: "quality", flaky: "quality", vitals: "quality", crawl_test: "quality",
+  ping: "probes", loadtest: "probes", tls: "probes",
+  redirects: "probes", headers: "probes", cookies: "probes", robots: "probes",
+  security_paths: "probes", api_check: "probes", sitemap_test: "probes", dns_records: "probes",
+  cors: "probes", transport: "probes",
+  flow: "journeys", har_replay: "journeys", import_codegen: "journeys", ai_flow: "journeys",
+  api_contract: "api", realtime: "api", auth_test: "api",
+  misconfig_scan: "security", cve_lookup: "security", llm_redteam: "security",
+  exploit_poc: "security", attack_chain: "security", host_pentest: "security", cloud_pentest: "security",
+  db_assert: "security", chaos_inject: "security", chaos_webhook: "security",
+};
+function showPanel(id, opts) {
+  opts = opts || {};
+  if (!PANELS.includes(id)) id = "overview";
+  PANELS.forEach(function (p) {
+    var el = $("panel-" + p);
+    if (el) el.classList.toggle("is-active", p === id);
+  });
+  document.querySelectorAll(".side-rail [data-panel]").forEach(function (el) {
+    var active = el.dataset.panel === id;
+    el.classList.toggle("is-active", active);
+    if (active) el.setAttribute("aria-current", "page"); else el.removeAttribute("aria-current");
+  });
+  if (location.hash.slice(1) !== id) history.replaceState(null, "", "#" + id);
+  document.body.classList.remove("rail-open");
+  if (opts.scrollTarget) {
+    var t = document.getElementById(opts.scrollTarget);
+    if (t) t.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+document.querySelectorAll(".side-rail [data-panel]").forEach(function (btn) {
+  btn.addEventListener("click", function () { showPanel(btn.dataset.panel); });
+});
+$("menu-btn")?.addEventListener("click", function () { document.body.classList.toggle("rail-open"); });
+$("rail-overlay")?.addEventListener("click", function () { document.body.classList.remove("rail-open"); });
+window.addEventListener("hashchange", function () {
+  var h = location.hash.slice(1);
+  if (h && PANELS.includes(h)) showPanel(h);
+});
+if (location.hash.slice(1) && PANELS.includes(location.hash.slice(1))) showPanel(location.hash.slice(1));
+else showPanel("overview");
+
+let soundOn = localStorage.getItem("zyvor-sound") !== "off";
+let lastSync = null;
+let drawerPod = null;
+let drawerHover = false;
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* macOS Terminal-style log colorization */
+function colorizeLogLine(raw) {
+  if (raw == null || raw === "") return '<span class="tl-line l-muted">&nbsp;</span>';
+  let tone = "l-muted";
+  if (/✅|passed|\bPASS\b|✓|finished:|done:|health grade:|succeeded/i.test(raw)) tone = "l-success";
+  else if (/❌|failed|failure|\bFAIL\b|error:|ERROR|exception|traceback/i.test(raw)) tone = "l-error";
+  else if (/⏹|cancel|terminated/i.test(raw)) tone = "l-warn";
+  else if (/▶|\bstarted\b|starting…/i.test(raw)) tone = "l-info";
+  else if (/warning|\bwarn\b|⚠/i.test(raw)) tone = "l-warn";
+  else if (/fetching|generating|executing|crawling|auditing|running|parsing|discovering|building|comparing|capturing|asking|pipeline|saved |comparing|flaky run|auditing|found \d+/i.test(raw)) tone = "l-info";
+  else if (/grade:|inventory|gaps|checks:/i.test(raw)) tone = "l-accent";
+  else tone = "l-white";
+
+  let html = esc(raw);
+  html = html.replace(/^(\[[\d:]+\])\s?/, '<span class="tl-dim">$1</span> ');
+  html = html.replace(/(https?:\/\/[^\s&<>]+)/g, '<span class="tl-blue">$1</span>');
+  html = html.replace(/([\w./-]+\.(?:spec\.ts|tsx|js|mjs|md|json|html|pdf|csv|py))/g, '<span class="tl-blue">$1</span>');
+  html = html.replace(/(\d+)\/(\d+)\s+(passed|failed)/gi, function (_, a, b, word) {
+    var wc = word.toLowerCase() === "failed" ? "tl-red" : "tl-green";
+    return '<span class="tl-green">' + a + "/" + b + '</span> <span class="' + wc + '">' + word + "</span>";
+  });
+  html = html.replace(/\b(\d+)\s+passed\b/gi, '<span class="tl-green">$1 passed</span>');
+  html = html.replace(/\b(\d+)\s+failed\b/gi, '<span class="tl-red">$1 failed</span>');
+  html = html.replace(/\b(chromium|firefox|webkit|iPhone[\w ]+|Pixel[\w ]+|iPad[\w ]+)\b/g, '<span class="tl-magenta">$1</span>');
+  html = html.replace(/(✅|❌|▶|⏹|⚠)/g, '<span class="tl-bold">$1</span>');
+  return '<span class="tl-line ' + tone + '">' + html + '</span>';
+}
+
+function colorizeLogText(lines) {
+  const arr = Array.isArray(lines) ? lines : [];
+  return arr.map(colorizeLogLine).join("\n");
+}
+
+function renderLiveLog(lines, running) {
+  const log = $("live-log");
+  if (!log) return;
+  const arr = lines && lines.length ? lines : ["starting…"];
+  window._lastLog = arr.join("\n");
+  log.innerHTML = colorizeLogText(arr);
+  log.classList.toggle("is-idle", !running);
+}
+
+function rel(seconds) {
+  if (seconds == null) return "—";
+  if (seconds < 90) return seconds + "s";
+  if (seconds < 5400) return Math.round(seconds / 60) + "m";
+  if (seconds < 172800) return Math.round(seconds / 3600) + "h";
+  return Math.round(seconds / 86400) + "d";
+}
+function relIso(iso) {
+  if (!iso) return "—";
+  return rel(Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000 | 0)) + " ago";
+}
+function tspan(iso) {
+  return '<span title="' + esc(iso || "") + '">' + relIso(iso) + "</span>";
+}
+function fmtMem(bytes) {
+  if (bytes == null) return null;
+  if (bytes >= 1024 ** 3) return (bytes / 1024 ** 3).toFixed(1) + "Gi";
+  return Math.round(bytes / 1024 ** 2) + "Mi";
+}
+function fmtCpu(m) {
+  if (m == null) return null;
+  return m >= 1000 ? (m / 1000).toFixed(1) + " cpu" : Math.round(m) + "m";
+}
+function toast(kind, ok, sub) {
+  const host = $("toasts");
+  const el = document.createElement("div");
+  el.className = "toast " + (ok ? "ok" : "bad");
+  el.innerHTML = "<span>" + (ok ? "✅" : "❌") + '</span><span><span class="t-kind">' + esc(kind) + "</span><br><span class=\"t-sub\">" + esc(sub) + "</span></span>";
+  host.appendChild(el);
+  setTimeout(() => el.remove(), 7000);
+}
+
+/* minimal 5-field cron "next fire" — supports *, numbers, lists, and steps */
+function cronNext(expr) {
+  const parts = (expr || "").trim().split(/\s+/);
+  if (parts.length !== 5) return null;
+  const parse = (f, min, max) => {
+    const out = new Set();
+    for (const piece of f.split(",")) {
+      const m = piece.match(/^(\*|\d+)(?:\/(\d+))?$/);
+      if (!m) return null;
+      const step = m[2] ? parseInt(m[2], 10) : 1;
+      const start = m[1] === "*" ? min : parseInt(m[1], 10);
+      const end = m[1] === "*" ? max : (m[2] ? max : start);
+      for (let v = start; v <= end; v += step) out.add(v);
+    }
+    return out;
+  };
+  const fields = [parse(parts[0],0,59), parse(parts[1],0,23), parse(parts[2],1,31), parse(parts[3],1,12), parse(parts[4],0,6)];
+  if (fields.some(f => !f)) return null;
+  const t = new Date(); t.setUTCSeconds(0, 0); t.setUTCMinutes(t.getUTCMinutes() + 1);
+  for (let i = 0; i < 366 * 24 * 60; i++) {
+    if (fields[0].has(t.getUTCMinutes()) && fields[1].has(t.getUTCHours()) &&
+        fields[2].has(t.getUTCDate()) && fields[3].has(t.getUTCMonth() + 1) &&
+        fields[4].has(t.getUTCDay())) return t;
+    t.setUTCMinutes(t.getUTCMinutes() + 1);
+  }
+  return null;
+}
+function countdown(expr) {
+  const next = cronNext(expr);
+  if (!next) return null;
+  const s = Math.max(0, (next.getTime() - Date.now()) / 1000 | 0);
+  const h = s / 3600 | 0, m = (s % 3600) / 60 | 0;
+  return h > 0 ? h + "h " + m + "m" : m + "m";
+}
+
+function podStatus(p) {
+  const phase = p.phase || "Unknown";
+  if (phase === "Succeeded") return { color: "var(--status-ok)", label: "Succeeded" };
+  if (phase === "Failed") return { color: "var(--status-error)", label: "Failed" };
+  if (phase === "Pending") return { color: "var(--status-info)", label: "Pending" };
+  if (phase === "Running" && p.total && p.ready < p.total) return { color: "var(--status-warn)", label: "Running (not ready)" };
+  if (phase === "Running") return { color: "var(--status-ok)", label: "Running" };
+  return { color: "var(--status-warn)", label: phase };
+}
+
+/* dynamic favicon + tab title reflecting status */
+const STATUS_DOT = { go: "#22c55e", degraded: "#f59e0b", down: "#ef4444", offline: "#8e8e93" };
+function setFavicon(status) {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 32;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = STATUS_DOT[status] || STATUS_DOT.offline;
+  ctx.beginPath(); ctx.arc(16, 16, 11, 0, Math.PI * 2); ctx.fill();
+  let link = document.querySelector('link[rel="icon"]');
+  if (!link) { link = document.createElement("link"); link.rel = "icon"; document.head.appendChild(link); }
+  link.href = canvas.toDataURL("image/png");
+}
+
+function renderHero(overview, pods, runs) {
+  const hero = $("hero");
+  const status = overview.status || "offline";
+  hero.dataset.status = status;
+  const titles = { go: "ALL SYSTEMS GO", degraded: "DEGRADED", down: "SYSTEMS DOWN", offline: "CLUSTER OFFLINE" };
+  $("banner-title").textContent = titles[status] || status.toUpperCase();
+  setFavicon(status);
+  document.title = (status === "go" ? "🟢" : status === "degraded" ? "🟡" : status === "down" ? "🔴" : "⚪")
+    + " " + (titles[status] || status) + " · Zyvor Argus";
+  if (overview.server) {
+    $("server-info").innerHTML = "argus v" + esc(overview.server.version)
+      + ' · up <span title="' + esc(overview.server.started_at) + '">'
+      + rel(Math.max(0, (Date.now() - new Date(overview.server.started_at).getTime()) / 1000 | 0)) + "</span>";
+  }
+  $("banner-sub").textContent = overview.cluster && overview.cluster.available
+    ? "Kubernetes connected · namespace " + overview.namespace
+    : "no Kubernetes API — QA history only";
+  $("ns").textContent = overview.namespace ? "· ns/" + overview.namespace : "";
+
+  const podList = (pods && pods.available && pods.pods) || [];
+  const healthy = podList.filter((p) => p.phase === "Running" && (!p.total || p.ready >= p.total)).length;
+  $("stat-pods").textContent = pods && pods.available ? String(podList.length) : "—";
+  $("stat-pods-sub").textContent = pods && pods.available ? healthy + " healthy" : "No cluster connected";
+
+  const deps = (overview.workloads && overview.workloads.deployments) || [];
+  const ready = deps.reduce((a, d) => a + d.ready, 0);
+  const desired = deps.reduce((a, d) => a + d.desired, 0);
+  $("stat-replicas").textContent = deps.length ? ready + "/" + desired : "—";
+  $("stat-replicas-sub").textContent = deps.length ? deps.length + " deployment" + (deps.length === 1 ? "" : "s") : "No cluster connected";
+
+  const latest = runs && runs[0];
+  $("stat-run").textContent = latest ? latest.passed + "/" + latest.total : "—";
+  $("stat-run").style.color = latest ? (latest.failed > 0 ? "var(--status-error)" : "var(--status-ok)") : "";
+  $("stat-run-sub").textContent = latest ? relIso(latest.timestamp) : "no history";
+
+  // pass rate over history + trend vs the older half
+  const rated = (runs || []).filter((r) => r.total > 0);
+  if (rated.length) {
+    const rate = (list) => list.reduce((a, r) => a + r.passed / r.total, 0) / list.length;
+    const overall = rate(rated) * 100;
+    const half = Math.ceil(rated.length / 2);
+    const newer = rate(rated.slice(0, half)) * 100;
+    const older = rated.length > half ? rate(rated.slice(half)) * 100 : newer;
+    const delta = newer - older;
+    const arrow = Math.abs(delta) < 0.5 ? "" : delta > 0 ? ' <span class="trend-up">↑</span>' : ' <span class="trend-down">↓</span>';
+    $("stat-rate").innerHTML = overall.toFixed(0) + "%" + arrow;
+    $("stat-rate").style.color = overall >= 99 ? "var(--status-ok)" : overall >= 90 ? "" : "var(--status-warn)";
+    $("stat-rate-sub").textContent = "last " + rated.length + " run" + (rated.length === 1 ? "" : "s");
+  } else {
+    $("stat-rate").textContent = "—";
+    $("stat-rate").style.color = "";
+    $("stat-rate-sub").textContent = "no runs yet";
+  }
+
+  const crons = (overview.workloads && overview.workloads.cronjobs) || [];
+  const active = crons.find((c) => !c.suspend);
+  const cd = active ? countdown(active.schedule) : null;
+  $("stat-cron").textContent = cd ? "in " + cd : (active ? active.schedule : "—");
+  $("stat-cron-sub").textContent = active ? "cron/" + active.name : "no schedules";
+}
+
+function knowledgeStatSub(data, status) {
+  if (data.live_tools) return "Live tools enabled";
+  if (data.qdrant === "reachable") return "Qdrant connected";
+  if (data.deps_installed === false) return "pip install -e '.[knowledge]'";
+  if (data.configured === false) return "Set LLM_API_KEY + QDRANT_URL";
+  if (status === "degraded" && data.detail) return "Qdrant unreachable — see .env.knowledge.example";
+  return "Ask Zyra";
+}
+
+function renderWorkloads(w) {
+  const el = $("workloads");
+  if (!w || !w.available || (!w.deployments.length && !w.cronjobs.length)) {
+    el.innerHTML = '<div class="empty">No workload data (cluster offline or empty namespace).</div>';
+    return;
+  }
+  let html = "";
+  for (const d of w.deployments) {
+    const ok = d.ready >= d.desired && d.desired > 0;
+    html += '<div class="glass card"><div class="k">deploy/' + esc(d.name) + '</div>'
+      + '<div class="v" style="color:' + (ok ? "var(--status-ok)" : "var(--status-warn)") + '">' + d.ready + "/" + d.desired + '</div>'
+      + '<div class="d">replicas ready</div></div>';
+  }
+  for (const c of w.cronjobs) {
+    const cd = c.suspend ? null : countdown(c.schedule);
+    html += '<div class="glass card"><div class="k">cron/' + esc(c.name) + '</div>'
+      + '<div class="v">' + (c.suspend ? "suspended" : (cd ? "in " + cd : esc(c.schedule))) + '</div>'
+      + '<div class="d">' + esc(c.schedule) + ' · last: ' + relIso(c.last_schedule)
+      + (c.active ? ' · <b style="color:var(--status-warn)">running now</b>' : "") + '</div></div>';
+  }
+  el.innerHTML = html;
+}
+
+let podsCache = null;
+function renderPods(data) {
+  podsCache = data;
+  const el = $("pods");
+  if (!data.available) {
+    el.innerHTML = '<div class="empty">Kubernetes API unreachable — start a cluster or set KUBECONFIG. '
+      + 'The QA runs panel below still works.</div>';
+    return;
+  }
+  const filter = $("pod-search").value.trim().toLowerCase();
+  const pods = data.pods.filter((p) =>
+    !filter || [p.name, p.node, p.phase, (p.images || []).join(" ")].join(" ").toLowerCase().includes(filter));
+  if (!pods.length) {
+    el.innerHTML = '<div class="empty">' + (filter ? "No pods match “" + esc(filter) + "”." : "No pods in namespace " + esc(data.namespace) + ".") + "</div>";
+    return;
+  }
+  el.innerHTML = pods.map((p) => {
+    const st = podStatus(p);
+    const image = (p.images && p.images[0] || "").split("/").pop();
+    const cpu = p.usage ? fmtCpu(p.usage.cpu_millicores) : null;
+    const mem = p.usage ? fmtMem(p.usage.memory_bytes) : null;
+    return '<div class="glass card pod" data-pod="' + esc(p.name) + '" title="click for logs">'
+      + '<div class="row"><span class="dot" style="background:' + st.color + ';box-shadow:0 0 8px ' + st.color + '"></span>'
+      + '<span class="name">' + esc(p.name) + '</span>'
+      + '<span class="phase">' + esc(st.label) + '</span></div>'
+      + '<div class="meta">'
+      + '<span>ready <b>' + p.ready + "/" + p.total + '</b></span>'
+      + '<span class="' + (p.restarts > 0 ? "restarts-bad" : "") + '">restarts <b>' + p.restarts + '</b></span>'
+      + '<span>age <b>' + rel(p.age_seconds) + '</b></span>'
+      + (cpu ? '<span>cpu <b>' + cpu + '</b></span>' : "")
+      + (mem ? '<span>mem <b>' + mem + '</b></span>' : "")
+      + (p.node ? '<span>node <b>' + esc(p.node) + '</b></span>' : "")
+      + (image ? '<span><b>' + esc(image) + '</b></span>' : "")
+      + '</div>'
+      + (p.warnings && p.warnings.length ? '<div class="warn" title="' + esc(p.warnings.join("\n")) + '">⚠ ' + esc(p.warnings[p.warnings.length - 1]) + '</div>' : "")
+      + '<div class="meta" style="margin-top:8px"><button class="dl-btn pod-restart" data-pod="' + esc(p.name) + '">⟳ restart</button></div>'
+      + '</div>';
+  }).join("");
+  for (const card of el.querySelectorAll(".pod")) {
+    card.addEventListener("click", () => openDrawer(card.dataset.pod));
+  }
+  for (const btn of el.querySelectorAll(".pod-restart")) {
+    btn.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      const pod = btn.dataset.pod;
+      if (!confirm("Restart pod " + pod + "? Its controller will recreate it.")) return;
+      const res = await fetch("/api/dashboard/pods/" + encodeURIComponent(pod), { method: "DELETE" });
+      const data = await res.json();
+      toast("restart pod", !!data.ok, data.ok ? pod + " deleted — recreating" : (data.error || "failed"));
+      sync();
+    });
+  }
+}
+$("pod-search").addEventListener("input", () => { if (podsCache) renderPods(podsCache); });
+
+/* test-health panel */
+async function loadTestHealth() {
+  try {
+    const data = await fetch("/api/dashboard/tests").then((r) => r.json());
+    const el = $("test-health");
+    if (!data.tests.length) {
+      el.innerHTML = '<span class="d">No test history yet — run tests to build trends.</span>';
+      return;
+    }
+    el.innerHTML = data.tests.map((t) =>
+      '<div class="feed-item"><span class="f-kind">' + (t.flaky ? "🎲" : t.fails ? "⚠️" : "✅") + "</span>"
+      + '<span class="f-brief">' + esc(t.title) + "</span>"
+      + '<span class="f-when">' + t.fails + "/" + t.runs + " fails"
+      + (t.fail_pct ? " · " + t.fail_pct + "%" : "") + "</span></div>"
+    ).join("");
+  } catch (err) {
+    $("test-health").innerHTML = '<span class="d">failed: ' + esc(String(err)) + "</span>";
+  }
+}
+$("th-refresh").addEventListener("click", loadTestHealth);
+
+/* schedules — recurring monitors */
+async function loadSchedules() {
+  try {
+    const data = await fetch("/api/dashboard/schedules").then((r) => r.json());
+    const el = $("schedules");
+    if (!data.schedules.length) {
+      el.innerHTML = '<span class="d">No schedules — add one to monitor on a loop.</span>';
+      return;
+    }
+    el.innerHTML = data.schedules.map((s) =>
+      '<div class="feed-item"><span class="f-kind">🔁 ' + esc(KIND_LABELS[s.kind] || s.kind) + "</span>"
+      + '<span class="f-brief">every ' + rel(s.interval_s) + " · " + s.runs + " runs · next in " + rel(s.due_in_s) + "</span>"
+      + '<button class="copy-btn" data-sid="' + s.id + '" title="remove">✕</button></div>').join("");
+    for (const b of el.querySelectorAll("[data-sid]"))
+      b.addEventListener("click", async () => { await fetch("/api/dashboard/schedules/" + b.dataset.sid, { method: "DELETE" }); loadSchedules(); });
+  } catch (e) { /* offline */ }
+}
+
+/* findings — the developer-facing "what's broken" list */
+const SEV_COLOR = { critical: "var(--status-error)", high: "var(--status-error)", medium: "var(--status-warn)", low: "var(--accent-2)", info: "var(--label-secondary)" };
+async function loadFindings() {
+  try {
+    const data = await fetch("/api/dashboard/findings?limit=200").then((r) => r.json());
+    const el = $("findings"), counts = $("find-counts");
+    const c = data.counts || {};
+    counts.innerHTML = ["critical", "high", "medium", "low"].filter((s) => c[s])
+      .map((s) => '<span style="color:' + SEV_COLOR[s] + '">' + c[s] + " " + s + "</span>").join(" · ") || "";
+    if (!data.findings || !data.findings.length) {
+      el.innerHTML = '<span class="d">No findings yet — run API-contract, auth, live-data, vitals or audit and issues will collect here.</span>';
+      return;
+    }
+    el.innerHTML = '<div style="overflow-x:auto"><table class="runs-table"><tbody>'
+      + "<tr><th>severity</th><th>source</th><th>what's broken</th><th>detail</th><th>where</th><th>when</th></tr>"
+      + data.findings.map((f) => "<tr>"
+        + '<td><span class="chip" style="color:' + (SEV_COLOR[f.severity] || "") + '">' + esc(f.severity) + "</span></td>"
+        + '<td class="d">' + esc(KIND_LABELS[f.source] || f.source) + "</td>"
+        + "<td>" + esc(f.title) + (f.url ? ' <span class="d">· ' + esc(f.url) + "</span>" : "") + "</td>"
+        + '<td class="d" style="max-width:340px">' + esc(f.detail || "") + "</td>"
+        + '<td class="d"><code>' + esc(f.where || "") + "</code></td>"
+        + '<td class="d">' + relIso(f.at) + "</td></tr>").join("")
+      + "</tbody></table></div>";
+  } catch (e) { /* offline */ }
+}
+$("find-clear").addEventListener("click", async () => {
+  await fetch("/api/dashboard/findings", { method: "DELETE" });
+  loadFindings();
+});
+
+async function loadEngagements() {
+  try {
+    const data = await fetch("/api/v2/engagements").then((r) => r.json());
+    const list = data.engagements || [];
+    const el = $("engagements");
+    if (!list.length) {
+      el.innerHTML = '<span class="d">No engagements yet — create one above to unlock the cards below.</span>';
+    } else {
+      el.innerHTML = '<div style="overflow-x:auto"><table class="runs-table"><tbody>'
+        + "<tr><th>target</th><th>tier</th><th>scope</th><th>status</th><th></th></tr>"
+        + list.map((e) => "<tr><td><code>" + esc(e.target_pattern) + "</code></td><td class=\"d\">" + esc(e.tier) + "</td>"
+          + '<td class="d" style="max-width:260px">' + esc(e.scope_statement) + "</td>"
+          + "<td>" + (e.revoked_at ? '<span class="chip fail">revoked</span>' : '<span class="chip pass">active</span>') + "</td>"
+          + "<td>" + (e.revoked_at ? "" : '<button class="dl-btn eng-revoke" data-id="' + esc(e.id) + '">revoke</button>') + "</td></tr>").join("")
+        + "</tbody></table></div>";
+      for (const btn of el.querySelectorAll(".eng-revoke")) {
+        btn.addEventListener("click", async () => {
+          if (!confirm("Revoke this engagement? Jobs citing it will be rejected.")) return;
+          await fetch("/api/v2/engagements/" + encodeURIComponent(btn.dataset.id), { method: "DELETE" });
+          loadEngagements();
+        });
+      }
+    }
+    const active = list.filter((e) => !e.revoked_at);
+    const options = '<option value="">— select an authorized engagement —</option>'
+      + active.map((e) => '<option value="' + esc(e.id) + '">' + esc(e.target_pattern) + " (" + esc(e.tier) + ")</option>").join("");
+    for (const sel of document.querySelectorAll(".eng-select")) {
+      const prev = sel.value;
+      sel.innerHTML = options;
+      if (active.some((e) => e.id === prev)) sel.value = prev;
+    }
+  } catch (e) { /* offline */ }
+}
+$("eng-create").addEventListener("click", async () => {
+  const target_pattern = $("eng-pattern").value.trim();
+  const scope_statement = $("eng-scope").value.trim();
+  if (!target_pattern || !scope_statement) { toast("engagement", false, "target pattern and scope statement are required"); return; }
+  const res = await fetch("/api/v2/engagements", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target_pattern, scope_statement, tier: "active_recon" }),
+  });
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}));
+    toast("engagement", false, String(d.detail || "failed to create engagement"));
+    return;
+  }
+  $("eng-pattern").value = "";
+  $("eng-scope").value = "";
+  toast("engagement", true, "engagement created");
+  loadEngagements();
+});
+
+/* Requirements — versioned requirement store (read-only; written by the
+   pipeline's fetch -> parse -> evaluate_quality chain). */
+function scoreColor(score) {
+  if (score == null) return "";
+  if (score >= 80) return "#3ecf6b";
+  if (score >= 60) return "#e0b32a";
+  return "#f05a5a";
+}
+async function loadRequirements() {
+  try {
+    const data = await fetch("/api/v2/requirements").then((r) => r.json());
+    const list = data.requirements || [];
+    $("req-count").textContent = list.length ? list.length + " tracked" : "";
+    const el = $("requirements");
+    if (!list.length) {
+      el.innerHTML = '<span class="d">No requirements yet — run a pipeline against a <code>github</code> or <code>document</code> source and they\'ll collect here.</span>';
+      return;
+    }
+    el.innerHTML = '<div style="overflow-x:auto"><table class="runs-table"><tbody>'
+      + "<tr><th>title</th><th>source</th><th>version</th><th>quality</th><th>updated</th></tr>"
+      + list.map((r) => '<tr class="req-row" data-id="' + esc(r.id) + '" style="cursor:pointer">'
+        + "<td>" + esc(r.title) + '<div class="d"><code>' + esc(r.id) + "</code></div></td>"
+        + '<td class="d">' + esc(r.source_type) + (r.origin_id ? ' <span class="d">· ' + esc(r.origin_id) + "</span>" : "") + "</td>"
+        + '<td class="d">v' + esc(r.latest_version) + "</td>"
+        + '<td><span class="chip" style="color:' + scoreColor(r.quality_score) + '">' + (r.quality_score != null ? Math.round(r.quality_score) : "—") + "</span></td>"
+        + '<td class="d">' + relIso(r.updated_at) + "</td></tr>").join("")
+      + "</tbody></table></div>";
+    for (const row of el.querySelectorAll(".req-row")) {
+      row.addEventListener("click", () => openRequirementDetail(row.dataset.id));
+    }
+  } catch (e) { /* offline */ }
+}
+async function openRequirementDetail(id) {
+  const card = $("req-detail-card"), body = $("req-detail-body");
+  card.style.display = "block";
+  $("req-detail-title").textContent = id;
+  body.innerHTML = '<span class="d">loading…</span>';
+  card.scrollIntoView({ behavior: "smooth", block: "start" });
+  try {
+    const [detail, hist] = await Promise.all([
+      fetch("/api/v2/requirements/" + encodeURIComponent(id)).then((r) => r.json()),
+      fetch("/api/v2/requirements/" + encodeURIComponent(id) + "/history").then((r) => r.json()),
+    ]);
+    $("req-detail-title").textContent = detail.title || id;
+    const issues = (detail.quality_issues || []);
+    const issuesHtml = issues.length
+      ? '<ul style="margin:4px 0 0 18px;padding:0">' + issues.map((i) =>
+          "<li>" + esc(i.reason || i.kind || JSON.stringify(i)) + "</li>").join("") + "</ul>"
+      : '<span class="d">none</span>';
+    const versions = (hist.versions || []).slice().reverse();
+    const versionsHtml = versions.map((v) => {
+      const tests = v.linked_tests || [];
+      return '<div style="padding:8px 0;border-top:1px solid var(--border)">'
+        + '<div><b>v' + esc(v.version) + '</b> <span class="d">' + relIso(v.created_at) + '</span>'
+        + ' <span class="chip" style="color:' + scoreColor(v.quality_score) + '">score ' + (v.quality_score != null ? Math.round(v.quality_score) : "—") + "</span></div>"
+        + (tests.length
+            ? '<div class="d" style="margin-top:4px">generated tests: ' + tests.map((t) => "<code>" + esc(t) + "</code>").join(", ") + "</div>"
+            : "")
+        + "</div>";
+    }).join("");
+    body.innerHTML = '<div class="d">' + esc(detail.source_type || "") + (detail.origin_id ? " · " + esc(detail.origin_id) : "") + "</div>"
+      + '<div style="margin-top:10px"><b>Description</b><div class="d" style="white-space:pre-wrap;margin-top:2px">' + esc((detail.content && detail.content.description) || "") + "</div></div>"
+      + '<div style="margin-top:10px"><b>Quality issues</b>' + issuesHtml + "</div>"
+      + '<div style="margin-top:10px"><b>Version history</b>' + (versionsHtml || '<span class="d">none</span>') + "</div>";
+  } catch (e) {
+    body.innerHTML = '<span class="d">failed to load — ' + esc(String(e)) + "</span>";
+  }
+}
+$("req-detail-close").addEventListener("click", () => { $("req-detail-card").style.display = "none"; });
+$("req-refresh").addEventListener("click", () => { loadRequirements(); loadRequirementImpact(); });
+
+async function loadRequirementImpact() {
+  try {
+    const graph = await fetch("/api/v2/requirements/impact-graph").then((r) => r.json());
+    const models = Object.entries(graph.data_models || {}).filter(([, ids]) => ids.length > 1);
+    const modelsEl = $("req-data-models");
+    modelsEl.innerHTML = models.length
+      ? models.map(([name, ids]) => '<div style="padding:6px 0;border-top:1px solid var(--border)"><b>' + esc(name) + "</b><div class=\"d\" style=\"margin-top:2px\">"
+          + ids.map((id) => '<a href="#requirements" class="req-link" data-id="' + esc(id) + '" style="cursor:pointer;text-decoration:underline">' + esc(id) + "</a>").join(", ")
+          + "</div></div>").join("")
+      : '<span class="d">No data model is shared by more than one requirement yet.</span>';
+
+    const edges = graph.model_edges || [];
+    const edgesEl = $("req-model-edges");
+    if (edgesEl) {
+      edgesEl.innerHTML = edges.length
+        ? edges.slice(0, 40).map((e) => '<div style="padding:6px 0;border-top:1px solid var(--border)"><b>'
+            + esc(e.a) + "</b> ↔ <b>" + esc(e.b) + "</b>"
+            + '<span class="d"> · weight ' + esc(String(e.weight || 1)) + "</span></div>").join("")
+        : '<span class="d">No co-occurrence edges yet (need ≥2 models on one requirement).</span>';
+    }
+
+    const deps = graph.model_dependencies || [];
+    const depsEl = $("req-model-deps");
+    const canvas = $("req-dep-canvas");
+    if (depsEl) {
+      depsEl.innerHTML = deps.length
+        ? deps.slice(0, 40).map((d) => '<div style="padding:6px 0;border-top:1px solid var(--border)"><b>'
+            + esc(d.source) + "</b> → <b>" + esc(d.target) + "</b>"
+            + '<span class="d"> · ' + esc(d.relation || "depends_on")
+            + (d.requirement_id ? " · " + esc(d.requirement_id) : "") + "</span></div>").join("")
+        : '<span class="d">No typed dependencies yet (e.g. “Order depends on Payment”).</span>';
+    }
+    if (canvas) {
+      if (deps.length) {
+        canvas.style.display = "block";
+        const nodes = [];
+        const seen = new Set();
+        for (const d of deps.slice(0, 24)) {
+          for (const n of [d.source, d.target]) {
+            if (!seen.has(n)) { seen.add(n); nodes.push(n); }
+          }
+        }
+        const W = 640, H = 220, cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.36;
+        const pos = {};
+        nodes.forEach((n, i) => {
+          const a = (2 * Math.PI * i) / Math.max(nodes.length, 1) - Math.PI / 2;
+          pos[n] = { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) };
+        });
+        let svg = '<defs><marker id="dep-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="currentColor"/></marker></defs>';
+        for (const d of deps.slice(0, 24)) {
+          const a = pos[d.source], b = pos[d.target];
+          if (!a || !b) continue;
+          svg += '<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y
+            + '" stroke="currentColor" stroke-opacity="0.45" stroke-width="1.5" marker-end="url(#dep-arrow)"/>';
+        }
+        for (const n of nodes) {
+          const p = pos[n];
+          svg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="18" fill="rgba(255,138,61,0.15)" stroke="currentColor" stroke-opacity="0.5"/>'
+            + '<text x="' + p.x + '" y="' + (p.y + 4) + '" text-anchor="middle" font-size="11" fill="currentColor">' + esc(n) + "</text>";
+        }
+        canvas.innerHTML = svg;
+      } else {
+        canvas.style.display = "none";
+        canvas.innerHTML = "";
+      }
+    }
+
+    const flows = Object.entries(graph.flows || {});
+    const flowsEl = $("req-flows");
+    flowsEl.innerHTML = flows.length
+      ? flows.map(([name, info]) => '<div style="padding:6px 0;border-top:1px solid var(--border)"><b>' + esc(name) + "</b>"
+          + '<div class="d" style="margin-top:2px">requirements: ' + info.requirements.map((id) => '<a href="#requirements" class="req-link" data-id="' + esc(id) + '" style="cursor:pointer;text-decoration:underline">' + esc(id) + "</a>").join(", ") + "</div>"
+          + (info.tests.length ? '<div class="d" style="margin-top:2px">tests: ' + info.tests.map((t) => "<code>" + esc(t) + "</code>").join(", ") + "</div>" : "")
+          + "</div>").join("")
+      : '<span class="d">No requirement has a flow tagged yet.</span>';
+
+    for (const el of document.querySelectorAll("#panel-requirements .req-link")) {
+      el.addEventListener("click", (ev) => { ev.preventDefault(); openRequirementDetail(el.dataset.id); });
+    }
+  } catch (e) { /* offline */ }
+}
+
+/* Forge preset — fill the API-contract card with Forge's defaults (port 24631, key Admin@321) */
+{
+  const fp = document.getElementById("api-preset-forge");
+  if (fp) fp.addEventListener("click", () => {
+    $("api-url").value = "http://127.0.0.1";
+    $("api-port").value = "24631";
+    $("api-spec").value = "/openapi.json";
+    $("api-token").value = "Admin@321";
+    toast("forge", true, "filled Forge defaults — set the host if not local, then Test API");
+  });
+}
+
+$("sc-add").addEventListener("click", async () => {
+  const kind = $("sc-kind").value, arg = $("sc-arg").value.trim();
+  // card-driven kinds pull their params from their own action cards
+  const CARD_KINDS = ["flow", "route_sweep", "api_contract", "realtime", "vitals"];
+  const params = kind === "audit" ? { url: arg || "https://zyvor.dev", max_pages: 5 }
+    : kind === "ping" ? { urls: arg || "https://zyvor.dev" }
+    : kind === "tls" ? { host: arg || "zyvor.dev" }
+    : CARD_KINDS.includes(kind) ? jobParams(kind)
+    : {};
+  if (kind === "flow" && !(params.url && params.description)) {
+    toast("schedule", false, "fill the 🎬 Flow test card (URL + steps) first"); return;
+  }
+  if (["route_sweep", "api_contract", "realtime", "vitals"].includes(kind) && !params.url) {
+    toast("schedule", false, "fill the matching action card first"); return;
+  }
+  const res = await fetch("/api/dashboard/schedules", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind, interval_s: parseInt($("sc-interval").value, 10), params }),
+  });
+  if (res.status === 400) { const d = await res.json(); toast("schedule", false, d.detail || "invalid"); return; }
+  toast("schedule", true, "added — running " + (KIND_LABELS[kind] || kind) + " on a loop");
+  loadSchedules();
+});
+
+/* sound toggle */
+function syncSoundBtn() { $("sound-toggle").textContent = soundOn ? "🔔 sound" : "🔕 muted"; }
+$("sound-toggle").addEventListener("click", () => {
+  soundOn = !soundOn; localStorage.setItem("zyvor-sound", soundOn ? "on" : "off"); syncSoundBtn();
+  if (soundOn) beep(true);
+});
+syncSoundBtn();
+
+/* recorded videos panel */
+let videosOpen = false;
+$("videos-toggle").addEventListener("click", async () => {
+  videosOpen = !videosOpen;
+  $("videos-panel").style.display = videosOpen ? "block" : "none";
+  if (videosOpen) await loadVideos();
+});
+async function loadVideos() {
+  try {
+    const data = await fetch("/api/dashboard/videos").then((r) => r.json());
+    const el = $("videos-list");
+    if (!data.videos.length) {
+      el.innerHTML = '<span class="d">No videos yet — run smoke, crawl, or an executed NL test.</span>';
+      return;
+    }
+    el.innerHTML = data.videos.map((v) =>
+      '<div class="feed-item"><span class="f-when" title="' + esc(v.run) + '">' + relIso(new Date(v.mtime * 1000).toISOString()) + '</span>'
+      + '<span class="f-kind">🎬</span>'
+      + '<a class="rlink f-brief" href="' + esc(v.href) + '" target="_blank">' + esc(v.name) + "</a>"
+      + '<span class="f-when">' + Math.max(1, Math.round(v.size_bytes / 1024)) + " KB</span></div>"
+    ).join("");
+  } catch (err) {
+    $("videos-list").innerHTML = '<span class="d">failed: ' + esc(String(err)) + "</span>";
+  }
+}
+
+/* cluster events panel */
+let eventsOpen = false;
+$("events-toggle").addEventListener("click", async () => {
+  eventsOpen = !eventsOpen;
+  $("events-panel").style.display = eventsOpen ? "block" : "none";
+  if (eventsOpen) await loadEvents();
+});
+async function loadEvents() {
+  try {
+    const data = await fetch("/api/dashboard/events").then((r) => r.json());
+    const tbody = $("events-table").querySelector("tbody");
+    if (!data.available || !data.events.length) {
+      tbody.innerHTML = '<tr><td colspan="5">' + (data.available ? "No recent events." : "Cluster unavailable.") + "</td></tr>";
+      return;
+    }
+    tbody.innerHTML = data.events.map((e) =>
+      "<tr><td>" + tspan(e.at) + '</td>'
+      + '<td><span class="chip ' + (e.type === "Warning" ? "fail" : "pass") + '">' + esc(e.type) + "</span></td>"
+      + "<td>" + esc(e.reason) + (e.count > 1 ? " ×" + e.count : "") + "</td>"
+      + "<td>" + esc(e.object) + "</td>"
+      + '<td style="max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(e.message) + '">' + esc(e.message) + "</td></tr>"
+    ).join("");
+  } catch (err) {
+    $("events-table").querySelector("tbody").innerHTML = "<tr><td>failed: " + esc(String(err)) + "</td></tr>";
+  }
+}
+
+/* NL example chips + sticky action inputs */
+for (const chip of document.querySelectorAll(".nl-chip")) {
+  chip.addEventListener("click", () => { $("nl-desc").value = chip.textContent; });
+}
+const STICKY = ["run-source", "run-spec", "gen-source", "gen-spec", "disc-source", "ct-url", "ct-user", "ct-pages"];
+for (const id of STICKY) {
+  const el = $(id);
+  const saved = localStorage.getItem("zyvor-" + id);
+  if (saved !== null) el.value = saved;
+  el.addEventListener("change", () => localStorage.setItem("zyvor-" + id, el.value));
+}
+
+/* spec-path autocomplete */
+fetch("/api/dashboard/specs").then((r) => r.json()).then((d) => {
+  $("spec-list").innerHTML = (d.specs || []).map((s) => '<option value="' + esc(s) + '">').join("");
+}).catch(() => {});
+
+function renderRuns(runs) {
+  $("runs-empty").style.display = runs.length ? "none" : "block";
+  if (runs.length) {
+    const latest = runs[0];
+    $("latest-run").textContent = latest.passed + "/" + latest.total + " passed";
+    $("latest-run").style.color = latest.failed > 0 ? "var(--status-error)" : "var(--status-ok)";
+    $("latest-run-detail").textContent = relIso(latest.timestamp) + " · source: " + latest.source;
+  }
+  $("runs-table").querySelector("tbody").innerHTML = runs.slice(0, 12).map((r, i) =>
+    '<tr class="expandable" data-i="' + i + '" title="click for details"><td>' + tspan(r.timestamp) + '</td>'
+    + '<td><span class="chip ' + (r.failed > 0 ? "fail" : "pass") + '">' + (r.failed > 0 ? "FAIL" : "PASS") + '</span></td>'
+    + '<td>' + r.passed + "/" + r.total + ' passed</td>'
+    + '<td>' + (r.duration_s != null ? rel(r.duration_s | 0) : "—") + '</td>'
+    + '<td>' + esc(r.source) + '</td></tr>'
+    + '<tr class="run-detail" style="display:none"><td colspan="5">' + esc(r.summary || "(no summary)") + '</td></tr>'
+  ).join("");
+  for (const row of $("runs-table").querySelectorAll("tr.expandable")) {
+    row.addEventListener("click", () => {
+      const detail = row.nextElementSibling;
+      detail.style.display = detail.style.display === "none" ? "" : "none";
+    });
+  }
+  renderSpark(runs);
+  renderCompare(runs);
+}
+
+/* run comparison: baseline vs candidate deltas */
+function cmpDelta(a, b, unit, lowerIsBetter) {
+  if (a == null || b == null) return '<span class="d">—</span>';
+  const d = Math.round((b - a) * 100) / 100;
+  if (d === 0) return '<span class="d">no change</span>';
+  const good = lowerIsBetter ? d < 0 : d > 0;
+  return '<b style="color:var(' + (good ? "--status-ok" : "--status-error") + ')">' + (d > 0 ? "+" : "") + d + unit + '</b>';
+}
+function renderCompare(runs) {
+  const a = $("cmp-a"), b = $("cmp-b"), out = $("cmp-out");
+  if (!a || !b) return;
+  if (runs.length < 2) { out.innerHTML = '<span class="d">Run at least two QA runs to compare them.</span>'; return; }
+  const opts = runs.slice(0, 30).map((r, i) => '<option value="' + i + '">' + esc((r.timestamp || "").replace("T", " ").slice(0, 16)) + ' · ' + r.passed + '/' + r.total + ' · ' + esc(r.source) + '</option>').join("");
+  const keepA = a.value, keepB = b.value;
+  a.innerHTML = opts; b.innerHTML = opts;
+  a.value = keepA && a.querySelector('option[value="' + keepA + '"]') ? keepA : "1";
+  b.value = keepB && b.querySelector('option[value="' + keepB + '"]') ? keepB : "0";
+  const draw = () => {
+    const ra = runs[+a.value], rb = runs[+b.value];
+    const rate = (r) => r.total ? Math.round(1000 * r.passed / r.total) / 10 : null;
+    const row = (k, x, y, delta) => '<tr><td>' + k + '</td><td>' + x + '</td><td>' + y + '</td><td>' + delta + '</td></tr>';
+    const dur = (r) => r.duration_s != null ? Math.round(r.duration_s * 10) / 10 : null;
+    out.innerHTML = '<table class="runs-table" aria-label="Run comparison"><thead><tr><th scope="col" class="d">Metric</th><th scope="col" class="d">Baseline</th><th scope="col" class="d">Candidate</th><th scope="col" class="d">Change</th></tr></thead><tbody>'
+      + row("Pass rate", rate(ra) ?? "—", rate(rb) ?? "—", cmpDelta(rate(ra), rate(rb), " pts", false))
+      + row("Failed", ra.failed, rb.failed, cmpDelta(ra.failed, rb.failed, "", true))
+      + row("Total tests", ra.total, rb.total, cmpDelta(ra.total, rb.total, "", false))
+      + row("Duration (s)", dur(ra) ?? "—", dur(rb) ?? "—", cmpDelta(dur(ra), dur(rb), "s", true))
+      + row("V8 coverage %", ra.v8_coverage_percentage ?? "—", rb.v8_coverage_percentage ?? "—", cmpDelta(ra.v8_coverage_percentage, rb.v8_coverage_percentage, " pts", false))
+      + '</tbody></table>';
+  };
+  a.onchange = draw; b.onchange = draw; draw();
+}
+
+/* single-series pass-rate sparkline with hover tooltip (accent blue) */
+function renderSpark(runs) {
+  const svg = $("spark");
+  const pts = runs.slice(0, 30).reverse()
+    .map((r) => ({ rate: r.total ? r.passed / r.total : 0, run: r }));
+  if (pts.length < 2) { svg.innerHTML = ""; return; }
+  const W = 268, H = 46, PAD = 3;
+  const x = (i) => PAD + (i / (pts.length - 1)) * (W - 2 * PAD);
+  const y = (rate) => H - PAD - rate * (H - 2 * PAD);
+  const path = pts.map((p, i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + y(p.rate).toFixed(1)).join(" ");
+  const area = path + " L" + x(pts.length - 1).toFixed(1) + " " + (H - PAD) + " L" + x(0).toFixed(1) + " " + (H - PAD) + " Z";
+  const last = pts[pts.length - 1];
+  svg.innerHTML =
+    '<defs><linearGradient id="sparkfill" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0%" stop-color="rgba(0,122,255,0.28)"/><stop offset="100%" stop-color="rgba(0,122,255,0)"/>'
+    + '</linearGradient></defs>'
+    + '<line x1="' + PAD + '" y1="' + y(1) + '" x2="' + (W - PAD) + '" y2="' + y(1) + '" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>'
+    + '<path d="' + area + '" fill="url(#sparkfill)" stroke="none"/>'
+    + '<path d="' + path + '" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+    + '<circle cx="' + x(pts.length - 1) + '" cy="' + y(last.rate) + '" r="3.5" fill="var(--accent)" stroke="rgb(28,28,30)" stroke-width="2"/>'
+    + '<line id="spark-cross" y1="' + PAD + '" y2="' + (H - PAD) + '" stroke="var(--text-muted)" stroke-width="1" style="display:none"/>'
+    + '<circle id="spark-dot" r="3.5" fill="var(--accent)" stroke="rgb(28,28,30)" stroke-width="2" style="display:none"/>';
+  svg.onmousemove = (ev) => {
+    const rect = svg.getBoundingClientRect();
+    const i = Math.max(0, Math.min(pts.length - 1, Math.round(((ev.clientX - rect.left) / rect.width) * (pts.length - 1))));
+    const p = pts[i];
+    const cross = $("spark-cross"), dot = $("spark-dot"), tip = $("spark-tip");
+    cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.style.display = "";
+    dot.setAttribute("cx", x(i)); dot.setAttribute("cy", y(p.rate)); dot.style.display = "";
+    tip.style.display = "block";
+    tip.textContent = relIso(p.run.timestamp) + " — " + p.run.passed + "/" + p.run.total + " passed";
+    const px = (x(i) / W) * rect.width;
+    tip.style.left = Math.min(rect.width - 150, Math.max(0, px + 8)) + "px";
+    tip.style.top = "-8px";
+  };
+  svg.onmouseleave = () => {
+    $("spark-cross").style.display = "none";
+    $("spark-dot").style.display = "none";
+    $("spark-tip").style.display = "none";
+  };
+}
+
+async function openDrawer(pod) {
+  drawerPod = pod;
+  $("drawer-title").textContent = "logs — " + pod;
+  $("drawer-body").textContent = "loading…";
+  $("drawer-container").innerHTML = '<option value="">all containers</option>';
+  $("drawer").classList.add("open");
+  await refreshDrawer(true);
+}
+async function refreshDrawer(force) {
+  if (!drawerPod || (drawerHover && !force)) return;
+  try {
+    const lines = $("drawer-lines").value;
+    const container = $("drawer-container").value;
+    const url = "/api/dashboard/pods/" + encodeURIComponent(drawerPod) + "/logs?lines=" + lines
+      + (container ? "&container=" + encodeURIComponent(container) : "");
+    const res = await fetch(url);
+    const data = await res.json();
+    $("drawer-body").textContent = data.available
+      ? (data.lines.join("\n") || "(no log output)")
+      : "logs unavailable: " + (data.error || "cluster offline");
+    if (data.containers && data.containers.length > 1 && $("drawer-container").options.length <= 1) {
+      for (const c of data.containers) {
+        const opt = document.createElement("option");
+        opt.value = c; opt.textContent = c;
+        $("drawer-container").appendChild(opt);
+      }
+    }
+    if ($("drawer-follow").checked) {
+      const body = $("drawer-body");
+      body.scrollTop = body.scrollHeight;
+    }
+  } catch (err) {
+    $("drawer-body").textContent = "failed to fetch logs: " + err;
+  }
+}
+$("drawer-lines").addEventListener("change", () => refreshDrawer(true));
+$("drawer-container").addEventListener("change", () => refreshDrawer(true));
+$("drawer-download").addEventListener("click", () => {
+  const blob = new Blob([$("drawer-body").textContent], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = (drawerPod || "pod") + ".log";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+function closeDrawer() {
+  drawerPod = null;
+  $("drawer").classList.remove("open");
+}
+$("drawer-close").addEventListener("click", closeDrawer);
+$("drawer").addEventListener("mouseenter", () => { drawerHover = true; });
+$("drawer").addEventListener("mouseleave", () => { drawerHover = false; });
+/* ⌘K / Ctrl-K command palette */
+const PALETTE_CMDS = [
+  { label: "Ask Zyra (knowledge QA)", action: () => focusAskZyvor() },
+  { label: "Requirements (quality & history)", action: () => showPanel("requirements") },
+  { label: "Run smoke tests", kind: "smoke" },
+  { label: "Run full pipeline", kind: "full" },
+  { label: "Site audit", kind: "audit" },
+  { label: "Flaky check", kind: "flaky" },
+  { label: "Screenshot a URL", kind: "screenshot" },
+  { label: "Flow test (record a journey)", kind: "flow" },
+  { label: "Route sweep (visual)", kind: "route_sweep" },
+  { label: "AI test (describe a goal)", kind: "ai_flow" },
+  { label: "API contract test", kind: "api_contract" },
+  { label: "Core Web Vitals", kind: "vitals" },
+  { label: "Live data / WebSocket", kind: "realtime" },
+  { label: "Auth & session test", kind: "auth_test" },
+  { label: "HAR record / replay", kind: "har_replay" },
+  { label: "Import Playwright codegen", kind: "import_codegen" },
+  { label: "Compare two URLs", kind: "compare" },
+  { label: "Uptime ping", kind: "ping" },
+  { label: "Load test", kind: "loadtest" },
+  { label: "TLS certificate check", kind: "tls" },
+  { label: "Generate tests", kind: "generate" },
+  { label: "Discover coverage", kind: "discover" },
+  { label: "Visual regression", kind: "regression" },
+  { label: "Crawl & test any site", kind: "crawl_test" },
+  { label: "Misconfig scan (needs an engagement)", kind: "misconfig_scan" },
+  { label: "CVE lookup (needs an engagement)", kind: "cve_lookup" },
+  { label: "LLM red-team Ask Zyra (needs an engagement)", kind: "llm_redteam" },
+  { label: "Exploit PoC — sandboxed verification (needs exploit-tier engagement)", kind: "exploit_poc" },
+  { label: "Attack chain — multi-step escalation (needs exploit-tier engagement)", kind: "attack_chain" },
+  { label: "Host pentest — SSH enumeration (needs credentialed-pentest opt-in)", kind: "host_pentest" },
+  { label: "Cloud pentest — aws/gcloud/az enumeration (needs credentialed-pentest opt-in)", kind: "cloud_pentest" },
+  { label: "Port scan (needs engagement)", kind: "port_scan" },
+  { label: "TLS cipher scan (needs engagement)", kind: "tls_cipher_scan" },
+  { label: "DAST scan (needs exploit engagement + ZYVOR_DAST_SCAN_ENABLED)", kind: "dast_scan" },
+  { label: "Injection scan (needs DAST opt-in)", kind: "injection_scan" },
+  { label: "CSRF probe (needs DAST opt-in)", kind: "csrf_probe" },
+  { label: "SSRF probe (needs DAST opt-in)", kind: "ssrf_probe" },
+  { label: "Auth attack scan (needs DAST opt-in)", kind: "auth_attack_scan" },
+  { label: "IDOR scan (needs DAST opt-in)", kind: "idor_scan" },
+  { label: "Refresh dashboard", action: () => sync() },
+  { label: "Show cluster events", action: () => { showPanel("overview"); if (!eventsOpen) $("events-toggle").click(); } },
+  { label: "Show recorded videos", action: () => { showPanel("operations"); if (!videosOpen) $("videos-toggle").click(); } },
+];
+let palSel = 0, palFiltered = PALETTE_CMDS, palOpener = null;
+const PAL_RECENT_KEY = "zyvor-palette-recent";
+function palRecents() {
+  try { return JSON.parse(localStorage.getItem(PAL_RECENT_KEY) || "[]"); } catch (e) { return []; }
+}
+function palRemember(label) {
+  try {
+    var r = palRecents().filter(function (l) { return l !== label; });
+    r.unshift(label);
+    localStorage.setItem(PAL_RECENT_KEY, JSON.stringify(r.slice(0, 5)));
+  } catch (e) {}
+}
+function openPalette() {
+  palOpener = document.activeElement;
+  $("palette").style.display = "flex";
+  $("palette-input").value = ""; palSel = 0; renderPalette();
+  $("palette-input").focus();
+}
+function closePalette() {
+  $("palette").style.display = "none";
+  if (palOpener && palOpener.focus && document.contains(palOpener)) palOpener.focus();
+  palOpener = null;
+}
+function renderPalette() {
+  const q = $("palette-input").value.toLowerCase();
+  palFiltered = PALETTE_CMDS.filter((c) => c.label.toLowerCase().includes(q));
+  const recent = q ? [] : palRecents();
+  if (recent.length) {
+    // Empty query: surface recently used commands first.
+    const rank = (c) => { const i = recent.indexOf(c.label); return i === -1 ? recent.length : i; };
+    palFiltered = palFiltered.map((c, i) => ({ c, i })).sort((a, b) => rank(a.c) - rank(b.c) || a.i - b.i).map((x) => x.c);
+  }
+  if (palSel >= palFiltered.length) palSel = 0;
+  $("palette-list").innerHTML = palFiltered.map((c, i) =>
+    '<div class="palette-item ' + (i === palSel ? "sel" : "") + '" data-i="' + i + '" role="option" id="pal-opt-' + i
+    + '" aria-selected="' + (i === palSel ? "true" : "false") + '">'
+    + esc(c.label)
+    + (recent.indexOf(c.label) !== -1 ? '<span class="pk">recent</span>' : (c.kind ? '<span class="pk">action</span>' : '<span class="pk">view</span>'))
+    + "</div>").join("");
+  if (palFiltered.length) $("palette-input").setAttribute("aria-activedescendant", "pal-opt-" + palSel);
+  else $("palette-input").removeAttribute("aria-activedescendant");
+  for (const el of $("palette-list").querySelectorAll(".palette-item"))
+    el.addEventListener("click", () => runPalette(parseInt(el.dataset.i, 10)));
+}
+function runPalette(i) {
+  const cmd = palFiltered[i];
+  closePalette();
+  if (!cmd) return;
+  palRemember(cmd.label);
+  if (cmd.kind) startJob(cmd.kind);
+  else if (cmd.action) cmd.action();
+}
+$("palette-input").addEventListener("input", renderPalette);
+$("palette-input").addEventListener("keydown", (ev) => {
+  if (ev.key === "ArrowDown") { palSel = Math.min(palSel + 1, palFiltered.length - 1); renderPalette(); ev.preventDefault(); }
+  else if (ev.key === "ArrowUp") { palSel = Math.max(palSel - 1, 0); renderPalette(); ev.preventDefault(); }
+  else if (ev.key === "Enter") runPalette(palSel);
+  else if (ev.key === "Escape") closePalette();
+  else if (ev.key === "Tab") ev.preventDefault(); // modal: keep focus in the palette
+});
+$("palette").addEventListener("click", (ev) => { if (ev.target.id === "palette") closePalette(); });
+
+/* ── Ask Zyra (knowledge RAG) ── */
+const ASK_LS_PRODUCT = "zyvor-ask-product";
+const ASK_LS_DRAFT = "zyvor-ask-draft";
+let askThreadId = null;
+let askLastPayload = null;
+let askBusy = false;
+let askStreamingPreferred = true;
+let remediationThreadId = null;
+
+function focusAskZyvor() {
+  showPanel("ask");
+  const q = $("ask-question");
+  if (q) q.focus();
+}
+
+function formatAskAnswer(text) {
+  const escaped = esc(text || "");
+  return escaped
+    .replace(/```([\s\S]*?)```/g, "<code>$1</code>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+function renderAskBubble(role, html, metaHtml) {
+  const cls = role === "user" ? "ask-bubble user" : "ask-bubble assistant";
+  return '<div class="' + cls + '">'
+    + (metaHtml || "")
+    + '<div class="ask-answer">' + html + "</div></div>";
+}
+
+function citationMarkdown(citations) {
+  if (!citations || !citations.length) return "";
+  return "\n\n## Sources\n" + citations.map((c, i) => {
+    const bits = [c.title || c.document_id, c.section, c.source].filter(Boolean).join(" · ");
+    return (i + 1) + ". " + bits + (c.url ? " — " + c.url : "");
+  }).join("\n");
+}
+
+function lastAnswerMarkdown() {
+  if (!askLastPayload) return "";
+  const p = askLastPayload;
+  let md = "# Ask Zyra answer\n\n" + (p.answer || "") + "\n";
+  md += "\nConfidence: " + (p.confidence || "unknown") + "\n";
+  if (p.insufficient_context) md += "\nInsufficient context: true\n";
+  if (p.missing_information && p.missing_information.length) {
+    md += "\nMissing information:\n" + p.missing_information.map((m) => "- " + m).join("\n") + "\n";
+  }
+  if (p.recommended_action) md += "\nRecommended action: " + p.recommended_action + "\n";
+  md += citationMarkdown(p.citations || []);
+  return md;
+}
+
+function appendAskTurn(role, html, metaHtml, abstain) {
+  const el = $("ask-thread");
+  if (el.querySelector(".d") && !el.querySelector(".ask-bubble")) el.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.innerHTML = renderAskBubble(role, html, metaHtml);
+  const node = wrap.firstChild;
+  if (abstain && node) node.classList.add("abstain");
+  el.appendChild(node);
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderAssistantPayload(payload, latencyMs) {
+  const conf = payload.confidence || "low";
+  const retrieval = payload.retrieval || {};
+  let meta = '<div class="ask-meta">'
+    + '<span class="ask-badge ' + esc(conf) + '">' + esc(conf) + "</span>";
+  if (payload.insufficient_context) meta += '<span class="ask-badge low">insufficient context</span>';
+  if (latencyMs != null) meta += "<span>" + Math.round(latencyMs) + " ms</span>";
+  if (retrieval.documents_considered != null) {
+    meta += "<span>" + retrieval.validated_citations + "/" + retrieval.documents_considered + " citations validated</span>";
+  }
+  meta += "</div>";
+
+  let body = formatAskAnswer(payload.answer || "");
+  if (payload.missing_information && payload.missing_information.length) {
+    body += "\n\nMissing information:\n" + payload.missing_information.map((m) => "• " + esc(m)).join("\n");
+  }
+  if (payload.recommended_action) {
+    body += "\n\nRecommended action: " + esc(payload.recommended_action);
+  }
+  if (payload.citations && payload.citations.length) {
+    body += '<div class="ask-cites">' + payload.citations.map((c) => {
+      const title = esc(c.title || c.document_id || "Source");
+      const section = c.section ? " · " + esc(c.section) : "";
+      const source = c.source ? " · " + esc(c.source) : "";
+      const link = c.url
+        ? ' <a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + title + "</a>"
+        : title;
+      return '<div class="ask-cite">' + link + section + source + "</div>";
+    }).join("") + "</div>";
+  }
+  appendAskTurn("assistant", body, meta, !!payload.insufficient_context);
+}
+
+async function loadKnowledgeStatus() {
+  try {
+    const data = await fetch("/api/dashboard/knowledge/status").then((r) => r.json());
+    const status = data.status || "offline";
+    const lamp = $("knowledge-lamp");
+    if (lamp) lamp.dataset.status = status;
+    const label = $("knowledge-lamp-label");
+    if (label) {
+      label.textContent = status === "ok" ? "Knowledge ready"
+        : status === "degraded" ? "Knowledge degraded"
+        : "Knowledge offline";
+    }
+    const tile = $("stat-knowledge");
+    if (tile) {
+      tile.textContent = status === "ok" ? "Ready" : (status.charAt(0).toUpperCase() + status.slice(1));
+      tile.style.color = status === "ok" ? "var(--status-ok)" : status === "degraded" ? "var(--status-warn)" : "var(--text-muted)";
+    }
+    const sub = $("stat-knowledge-sub");
+    if (sub) sub.textContent = knowledgeStatSub(data, status);
+    const tileWrap = tile && tile.closest(".stat-tile");
+    if (tileWrap) {
+      tileWrap.title = data.detail || "";
+      if (data.deps_installed === false) {
+        tileWrap.title = "Install optional extras: pip install -e '.[knowledge]'";
+      }
+    }
+    const hint = $("ask-hint");
+    if (hint) {
+      hint.textContent = data.deps_installed === false
+        ? "Ask Zyra is optional. Install with: pip install -e '.[knowledge]' — then set LLM_API_KEY and start Qdrant."
+        : data.live_tools
+        ? "Read-only knowledge + live cluster diagnostics enabled for: "
+          + ((data.live_namespaces || []).join(", ") || "configured namespaces")
+          + ". Mutations remain out of scope."
+        : "Read-only knowledge agent — it will not mutate cluster state. Enable ENABLE_LIVE_CLUSTER_TOOLS for observed-state diagnostics.";
+    }
+    askStreamingPreferred = data.streaming !== false;
+    const remPanel = $("remediation-panel");
+    if (remPanel) remPanel.style.display = data.remediation ? "block" : "none";
+  } catch (err) {
+    const lamp = $("knowledge-lamp");
+    if (lamp) lamp.dataset.status = "offline";
+  }
+}
+
+async function loadAskSuggestions() {
+  const chips = $("ask-chips");
+  if (!chips) return;
+  try {
+    const data = await fetch("/api/dashboard/knowledge/suggestions").then((r) => r.json());
+    const items = data.suggestions || [];
+    chips.innerHTML = items.map((s) =>
+      '<button type="button" class="ask-chip" data-q="' + esc(s.question) + '" data-p="' + esc(s.product || "") + '">'
+      + esc((s.product ? s.product + ": " : "") + s.question) + "</button>"
+    ).join("");
+    for (const btn of chips.querySelectorAll(".ask-chip")) {
+      btn.addEventListener("click", () => {
+        $("ask-question").value = btn.dataset.q || "";
+        if (btn.dataset.p) $("ask-product").value = btn.dataset.p;
+        focusAskZyvor();
+      });
+    }
+  } catch (err) {
+    chips.innerHTML = "";
+  }
+}
+
+async function submitAsk() {
+  if (askBusy) return;
+  const question = ($("ask-question").value || "").trim();
+  if (question.length < 2) {
+    toast("Ask Zyra", false, "Enter a question");
+    return;
+  }
+  askBusy = true;
+  $("ask-submit").disabled = true;
+  $("ask-status").textContent = askStreamingPreferred ? "streaming…" : "searching…";
+  $("ask-latency").textContent = "";
+  appendAskTurn("user", esc(question));
+  try {
+    localStorage.setItem(ASK_LS_DRAFT, "");
+    localStorage.setItem(ASK_LS_PRODUCT, $("ask-product").value || "");
+  } catch (e) { /* ignore */ }
+
+  const body = {
+    question,
+    product: $("ask-product").value || null,
+    document_type: $("ask-doctype").value || null,
+    thread_id: askThreadId,
+  };
+  const started = performance.now();
+  try {
+    if (askStreamingPreferred) {
+      await submitAskStream(body, started);
+    } else {
+      await submitAskJson(body, started);
+    }
+  } catch (err) {
+    appendAskTurn("assistant", esc(String(err)), "", true);
+    $("ask-status").textContent = "error";
+  } finally {
+    askBusy = false;
+    $("ask-submit").disabled = false;
+  }
+}
+
+async function submitAskJson(body, started) {
+  const res = await fetch("/api/dashboard/ask", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const latency = parseFloat(res.headers.get("X-Response-Time-Ms") || "") || (performance.now() - started);
+  const payload = await res.json();
+  if (!res.ok) {
+    appendAskTurn("assistant", esc(payload.detail || "Ask failed"), "", true);
+    toast("Ask Zyra", false, payload.detail || ("HTTP " + res.status));
+    $("ask-status").textContent = "failed";
+    return;
+  }
+  finishAskPayload(payload, latency);
+}
+
+async function submitAskStream(body, started) {
+  const res = await fetch("/api/dashboard/ask/stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "text/event-stream" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok || !res.body) {
+    // Fall back to non-streaming ask.
+    await submitAskJson(body, started);
+    return;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let gotFinal = false;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() || "";
+    for (const part of parts) {
+      const line = part.split("\n").find((l) => l.startsWith("data: "));
+      if (!line) continue;
+      let event;
+      try { event = JSON.parse(line.slice(6)); } catch (e) { continue; }
+      if (event.event === "understanding") {
+        $("ask-status").textContent = "understood · " + (event.data && event.data.intent ? event.data.intent : "routing");
+      } else if (event.event === "tool_call") {
+        $("ask-status").textContent = "tools · " + (event.tools || []).join(", ");
+      } else if (event.event === "tool_result") {
+        $("ask-status").textContent = "tool result · " + (event.tool || "ok");
+      } else if (event.event === "warning") {
+        $("ask-status").textContent = "degraded stream";
+      } else if (event.event === "error") {
+        appendAskTurn("assistant", esc(event.detail || "stream error"), "", true);
+        $("ask-status").textContent = "failed";
+        return;
+      } else if (event.event === "final") {
+        gotFinal = true;
+        const payload = { ...(event.data || {}), thread_id: event.thread_id || (event.data && event.data.thread_id) };
+        finishAskPayload(payload, performance.now() - started);
+      }
+    }
+  }
+  if (!gotFinal) {
+    await submitAskJson(body, started);
+  }
+}
+
+function finishAskPayload(payload, latency) {
+  askThreadId = payload.thread_id || askThreadId;
+  askLastPayload = payload;
+  $("ask-thread-label").textContent = askThreadId ? askThreadId.slice(0, 18) : "new";
+  renderAssistantPayload(payload, Number.isFinite(latency) ? latency : null);
+  $("ask-question").value = "";
+  $("ask-status").textContent = payload.insufficient_context ? "abstained" : "answered";
+  if (Number.isFinite(latency)) $("ask-latency").textContent = Math.round(latency) + " ms";
+}
+
+async function submitRemediation() {
+  const issue = ($("remediation-issue").value || "").trim();
+  if (issue.length < 2) { toast("Remediation", false, "Describe the issue"); return; }
+  $("remediation-status").textContent = "planning…";
+  $("remediation-approve").style.display = "none";
+  $("remediation-reject").style.display = "none";
+  try {
+    const res = await fetch("/api/dashboard/remediation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ issue, thread_id: remediationThreadId }),
+    });
+    const data = await res.json();
+    $("remediation-out").textContent = JSON.stringify(data, null, 2);
+    if (!data.enabled) {
+      $("remediation-status").textContent = "disabled";
+      return;
+    }
+    remediationThreadId = data.thread_id || remediationThreadId;
+    if (data.interrupted) {
+      $("remediation-status").textContent = "awaiting approval";
+      $("remediation-approve").style.display = "";
+      $("remediation-reject").style.display = "";
+    } else {
+      $("remediation-status").textContent = "planned";
+    }
+  } catch (err) {
+    $("remediation-status").textContent = "error";
+    $("remediation-out").textContent = String(err);
+  }
+}
+
+async function resumeRemediation(decision) {
+  if (!remediationThreadId) { toast("Remediation", false, "No interrupt thread"); return; }
+  $("remediation-status").textContent = decision + "…";
+  const res = await fetch("/api/dashboard/remediation/resume", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ thread_id: remediationThreadId, decision }),
+  });
+  const data = await res.json();
+  $("remediation-out").textContent = JSON.stringify(data, null, 2);
+  $("remediation-approve").style.display = data.interrupted ? "" : "none";
+  $("remediation-reject").style.display = data.interrupted ? "" : "none";
+  $("remediation-status").textContent = data.interrupted ? "awaiting approval" : (decision + "d");
+}
+
+$("remediation-submit")?.addEventListener("click", submitRemediation);
+$("remediation-approve")?.addEventListener("click", () => resumeRemediation("approve"));
+$("remediation-reject")?.addEventListener("click", () => resumeRemediation("reject"));
+
+function resetAskThread() {
+  askThreadId = null;
+  askLastPayload = null;
+  $("ask-thread").innerHTML = '<span class="d">Ask a question to start a grounded, cited answer.</span>';
+  $("ask-thread-label").textContent = "new";
+  $("ask-status").textContent = "";
+  $("ask-latency").textContent = "";
+}
+
+$("ask-submit")?.addEventListener("click", submitAsk);
+$("ask-new-thread")?.addEventListener("click", resetAskThread);
+$("ask-copy-md")?.addEventListener("click", async () => {
+  const md = lastAnswerMarkdown();
+  if (!md) { toast("Ask Zyra", false, "No answer to copy yet"); return; }
+  try {
+    await navigator.clipboard.writeText(md);
+    toast("Ask Zyra", true, "Copied Markdown for Slack/Jira");
+  } catch (err) {
+    toast("Ask Zyra", false, "Clipboard unavailable");
+  }
+});
+$("ask-question")?.addEventListener("keydown", (ev) => {
+  if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") {
+    ev.preventDefault();
+    submitAsk();
+  }
+});
+$("ask-question")?.addEventListener("input", () => {
+  try { localStorage.setItem(ASK_LS_DRAFT, $("ask-question").value || ""); } catch (e) { /* ignore */ }
+});
+$("ask-product")?.addEventListener("change", () => {
+  try { localStorage.setItem(ASK_LS_PRODUCT, $("ask-product").value || ""); } catch (e) { /* ignore */ }
+});
+try {
+  const draft = localStorage.getItem(ASK_LS_DRAFT);
+  const product = localStorage.getItem(ASK_LS_PRODUCT);
+  if (draft && $("ask-question")) $("ask-question").value = draft;
+  if (product && $("ask-product")) $("ask-product").value = product;
+} catch (e) { /* ignore */ }
+loadAskSuggestions();
+loadKnowledgeStatus();
+
+/* sound cue on finish — rising tone on green, falling on red (mutable) */
+function beep(ok) {
+  if (!soundOn) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = "sine";
+    const t = ctx.currentTime;
+    o.frequency.setValueAtTime(ok ? 520 : 400, t);
+    o.frequency.exponentialRampToValueAtTime(ok ? 780 : 240, t + 0.18);
+    g.gain.setValueAtTime(0.14, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    o.start(t); o.stop(t + 0.36);
+  } catch (e) { /* audio unavailable */ }
+}
+
+document.addEventListener("keydown", (ev) => {
+  if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === "k") { ev.preventDefault(); openPalette(); return; }
+  if (ev.key === "Escape") { closeDrawer(); closePalette(); }
+  if (ev.key === "r" && !ev.metaKey && !ev.ctrlKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) sync();
+});
+$("logout").addEventListener("click", async (ev) => {
+  ev.preventDefault();
+  await fetch("/api/logout", { method: "POST" });
+  location.href = "/login";
+});
+
+/* chaos_inject/chaos_webhook share the same control-test param shape */
+function buildChaosControlParams(controlKind, descText) {
+  if (controlKind === "smoke") {
+    const params = {};
+    if (descText) params.grep = descText;
+    return params;
+  }
+  return { description: descText, record: false };
+}
+
+/* job triggers — every CLI capability, online */
+function jobParams(kind) {
+  if (kind === "smoke") return {
+    grep: ($("sm-grep") && $("sm-grep").value.trim()) || "",
+    shard: ($("sm-shard") && $("sm-shard").value.trim()) || "",
+  };
+  if (kind === "full") return {
+    source: $("run-source").value,
+    spec: $("run-spec").value.trim(),
+    pr_number: $("run-pr").value ? parseInt($("run-pr").value, 10) : null,
+    expand_coverage: $("run-coverage").checked,
+  };
+  if (kind === "generate") return {
+    source: $("gen-source").value,
+    spec: $("gen-spec").value.trim(),
+    expand_coverage: $("gen-coverage").checked,
+  };
+  if (kind === "discover") return { source: $("disc-source").value };
+  if (kind === "create") return { description: $("nl-desc").value.trim(), execute: $("nl-execute").checked };
+  if (kind === "regression") return { update_baselines: $("reg-update").checked };
+  if (kind === "crawl_test") return {
+    url: $("ct-url").value.trim(),
+    username: $("ct-user").value.trim(),
+    password: $("ct-pass").value,
+    insecure: $("ct-insecure").checked,
+    max_pages: parseInt($("ct-pages").value, 10) || 30,
+  };
+  if (kind === "audit") return {
+    url: $("au-url").value.trim(),
+    max_pages: parseInt($("au-pages").value, 10) || 10,
+    insecure: $("au-insecure").checked,
+    checks: Array.from(document.querySelectorAll("#au-checks input:checked")).map((c) => c.value),
+  };
+  if (kind === "flaky") return { runs: parseInt($("fl-runs").value, 10) || 3, target: "manual" };
+  if (kind === "screenshot") return {
+    url: $("sh-url").value.trim(),
+    viewports: Array.from(document.querySelectorAll("#sh-vps input:checked")).map((c) => c.value).filter((v) => v !== "on"),
+    full_page: $("sh-full").checked,
+  };
+  if (kind === "compare") return { url_a: $("cmp-a").value.trim(), url_b: $("cmp-b").value.trim(), insecure: $("cmp-insecure").checked };
+  if (kind === "ping") return { urls: $("pg-urls").value };
+  if (kind === "loadtest") return { url: $("lt-url").value.trim(), requests: parseInt($("lt-n").value, 10) || 100, concurrency: parseInt($("lt-c").value, 10) || 10 };
+  if (kind === "tls") return { host: $("tls-host").value.trim() };
+  if (kind === "flow") return {
+    url: $("fw-url").value.trim(),
+    description: $("fw-desc").value,
+    username: $("fw-user").value.trim(),
+    password: $("fw-pass").value,
+    session: $("fw-session").value.trim(),
+    browser: $("fw-browser").value,
+    device: $("fw-device").value,
+    throttle: $("fw-throttle").value,
+    insecure: $("fw-insecure").checked,
+    record: $("fw-record").checked,
+  };
+  if (kind === "ai_flow") return {
+    url: $("ai-url").value.trim(),
+    goal: $("ai-goal").value.trim(),
+    session: $("ai-session").value.trim(),
+    max_steps: parseInt($("ai-steps").value, 10) || 20,
+    insecure: $("ai-insecure").checked,
+  };
+  if (kind === "route_sweep") return {
+    url: $("rs-url").value.trim(),
+    routes: $("rs-routes").value,
+    viewports: Array.from(document.querySelectorAll("#rs-vps input[value]:checked")).map((c) => c.value),
+    update_baselines: $("rs-update").checked,
+    insecure: $("rs-insecure").checked,
+    auto: $("rs-auto").checked,
+  };
+  if (kind === "api_contract") {
+    // combine host + port (port defaults to Forge's 24631); default scheme http for a bare host
+    let host = $("api-url").value.trim();
+    const port = $("api-port").value.trim();
+    if (host && !/^https?:\/\//.test(host)) host = "http://" + host;
+    if (host && port) { try { const u = new URL(host); if (!u.port) { u.port = port; host = u.origin; } } catch (e) { /* leave as typed */ } }
+    let spec = $("api-spec").value.trim();
+    const inline = $("api-spec-json").value.trim();
+    if (inline) { try { spec = JSON.parse(inline); } catch (e) { toast("api", false, "inline spec is not valid JSON"); throw e; } }
+    else if (spec && spec.startsWith("/") && host) spec = host + spec;  // relative spec → absolute
+    const tok = $("api-token").value.trim();
+    return {
+      url: host,
+      mode: "spec",
+      spec,
+      auth: tok ? { token: tok } : null,
+      include_writes: $("api-writes").checked,
+      insecure: $("api-insecure").checked,
+    };
+  }
+  if (kind === "api_contract_diff") {
+    const parseSpecRef = (text) => {
+      text = text.trim();
+      if (!text) return null;
+      try { return JSON.parse(text); } catch (e) { return text; }  // not JSON -> URL or git:<ref>:<path>
+    };
+    return {
+      spec_a: parseSpecRef($("acd-spec-a").value),
+      spec_b: parseSpecRef($("acd-spec-b").value),
+      insecure: $("acd-insecure").checked,
+      fail_on: $("acd-fail-on").value,
+    };
+  }
+  if (kind === "contract_verify") return {
+    url: $("cvf-url").value.trim(),
+    har: $("cvf-har").value.trim(),
+    insecure: $("cvf-insecure").checked,
+    engagement_id: $("cvf-eng").value,
+  };
+  if (kind === "vitals") return {
+    url: $("cwv-url").value.trim(),
+    device: $("cwv-device").value,
+    throttle: $("cwv-throttle").value,
+    insecure: $("cwv-insecure").checked,
+  };
+  if (kind === "realtime") return {
+    url: $("rt-url").value.trim(),
+    ws: $("rt-ws").value.trim(),
+    sse: $("rt-sse").value.trim(),
+    ticket_url: $("rt-ticket").value.trim(),
+    token: $("rt-token").value.trim(),
+    subprotocol_jwt: $("rt-subproto").checked,
+    expect_messages: parseInt($("rt-expect").value, 10) || 1,
+    live_selector: $("rt-live").value.trim(),
+    insecure: $("rt-insecure").checked,
+  };
+  if (kind === "auth_test") return {
+    url: $("au-url").value.trim(),
+    protected: $("au-protected").value.trim() || "/",
+    login_url: $("au-login").value.trim(),
+    api_login: $("au-api").value.trim(),
+    logout_url: $("au-logout").value.trim(),
+    username: $("au-user").value.trim(),
+    password: $("au-pass").value,
+    save_session: $("au-save").checked,
+    insecure: $("au-insecure").checked,
+  };
+  if (kind === "har_replay") return {
+    url: $("har-url").value.trim(),
+    mode: $("har-mode").value,
+    har: $("har-path").value.trim(),
+    routes: $("har-routes").value,
+    expect_text: $("har-expect").value.trim(),
+    not_found_ok: $("har-fallback").checked,
+    insecure: $("har-insecure").checked,
+  };
+  if (kind === "import_codegen") return {
+    script: $("cg-script").value,
+    url: $("cg-url").value.trim(),
+    run: $("cg-run").checked,
+    insecure: $("cg-insecure").checked,
+  };
+  if (kind === "misconfig_scan") return {
+    url: $("ms-url").value.trim(),
+    max_paths: parseInt($("ms-paths").value, 10) || 60,
+    insecure: $("ms-insecure").checked,
+    engagement_id: $("ms-eng").value,
+  };
+  if (kind === "cve_lookup") return {
+    url: $("cve-url").value.trim(),
+    insecure: $("cve-insecure").checked,
+    engagement_id: $("cve-eng").value,
+  };
+  if (kind === "sca_scan") return {
+    url: $("sca-url").value.trim(),
+    checkout_path: $("sca-checkout").value.trim(),
+    insecure: $("sca-insecure").checked,
+    engagement_id: $("sca-eng").value,
+  };
+  if (kind === "llm_redteam") return {
+    target: $("lr-target").value,
+    base_url: $("lr-baseurl").value.trim(),
+    api_key: $("lr-apikey").value,
+    categories: Array.from(document.querySelectorAll("#lr-categories input:checked")).map((c) => c.value),
+    engagement_id: $("lr-eng").value,
+  };
+  if (kind === "exploit_poc") return {
+    url: $("ep-url").value.trim(),
+    finding_description: $("ep-finding").value.trim(),
+    timeout_s: parseInt($("ep-timeout").value, 10) || 60,
+    engagement_id: $("ep-eng").value,
+  };
+  if (kind === "attack_chain") return {
+    url: $("ac-url").value.trim(),
+    objective: $("ac-objective").value.trim(),
+    max_steps: parseInt($("ac-steps").value, 10) || 5,
+    timeout_s: parseInt($("ac-timeout").value, 10) || 60,
+    engagement_id: $("ac-eng").value,
+  };
+  if (kind === "host_pentest") {
+    const envVar = $("hp-secretenv").value.trim();
+    const creds = { username: $("hp-user").value.trim() };
+    creds[$("hp-authmethod").value] = { "$secret": "env:" + envVar };
+    return {
+      host: $("hp-host").value.trim(),
+      port: parseInt($("hp-port").value, 10) || 22,
+      finding_description: $("hp-finding").value.trim(),
+      creds,
+      timeout_s: parseInt($("hp-timeout").value, 10) || 60,
+      engagement_id: $("hp-eng").value,
+    };
+  }
+  if (kind === "db_assert") {
+    let queryParams = [];
+    const qpText = $("dba-query-params").value.trim();
+    if (qpText) {
+      try { queryParams = JSON.parse(qpText); }
+      catch (e) { toast("db_assert", false, "query params must be a JSON array"); throw e; }
+    }
+    const valText = $("dba-value").value.trim();
+    let value = null;
+    try { value = valText ? JSON.parse(valText) : null; } catch (e) { value = valText; }  // bare unquoted strings allowed too
+    const mode = $("dba-mode").value;
+    const assertion = { mode, op: $("dba-op").value, value };
+    if (mode !== "row_count") assertion.column = $("dba-column").value.trim();
+    if (mode === "cell_equals") assertion.row = parseInt($("dba-row").value, 10) || 0;
+    return {
+      engine: $("dba-engine").value,
+      target: $("dba-target").value.trim(),
+      db_secret: { "$secret": "env:" + $("dba-secretenv").value.trim() },
+      query: $("dba-query").value.trim(),
+      query_params: queryParams,
+      assertion,
+      timeout_s: parseInt($("dba-timeout").value, 10) || 30,
+      engagement_id: $("dba-eng").value,
+    };
+  }
+  if (kind === "chaos_inject") {
+    if (!$("ci-consent").checked) {
+      toast("chaos_inject", false, "confirm the target has consented to fault injection first");
+      throw new Error("consent required");
+    }
+    const controlKind = $("ci-control-kind").value;
+    return {
+      url: $("ci-url").value.trim(),
+      fault_type: $("ci-fault-type").value,
+      latency_ms: parseInt($("ci-latency").value, 10) || 200,
+      packet_loss_pct: parseInt($("ci-loss").value, 10) || 10,
+      duration_s: parseInt($("ci-duration").value, 10) || 30,
+      control_kind: controlKind,
+      control_params: buildChaosControlParams(controlKind, $("ci-control-desc").value.trim()),
+      error_rate_threshold_pct: parseFloat($("ci-error-threshold").value) || 10,
+      recovery_sla_s: parseFloat($("ci-recovery-sla").value) || 30,
+      insecure: $("ci-insecure").checked,
+      target_accepts_fault_injection: true,
+      engagement_id: $("ci-eng").value,
+    };
+  }
+  if (kind === "chaos_webhook") {
+    if (!$("cw-consent").checked) {
+      toast("chaos_webhook", false, "confirm the target has consented to fault injection first");
+      throw new Error("consent required");
+    }
+    const controlKind = $("cw-control-kind").value;
+    return {
+      url: $("cw-url").value.trim(),
+      experiment_webhook_url: $("cw-start-url").value.trim(),
+      experiment_stop_webhook_url: $("cw-stop-url").value.trim(),
+      settle_s: parseInt($("cw-settle").value, 10) || 5,
+      control_kind: controlKind,
+      control_params: buildChaosControlParams(controlKind, $("cw-control-desc").value.trim()),
+      error_rate_threshold_pct: parseFloat($("cw-error-threshold").value) || 10,
+      recovery_sla_s: parseFloat($("cw-recovery-sla").value) || 30,
+      insecure: $("cw-insecure").checked,
+      target_accepts_fault_injection: true,
+      engagement_id: $("cw-eng").value,
+    };
+  }
+  if (kind === "cloud_pentest") {
+    let creds = {};
+    const raw = $("cp-creds").value.trim();
+    if (raw) {
+      try { creds = JSON.parse(raw); }
+      catch (e) { toast("cloud_pentest", false, "creds is not valid JSON"); throw e; }
+    }
+    return {
+      provider: $("cp-provider").value,
+      target: $("cp-target").value.trim(),
+      finding_description: $("cp-finding").value.trim(),
+      creds,
+      timeout_s: parseInt($("cp-timeout").value, 10) || 60,
+      engagement_id: $("cp-eng").value,
+    };
+  }
+  if (kind === "port_scan") return {
+    url: $("ps-url").value.trim(),
+    ports: $("ps-ports").value.trim() || undefined,
+    engagement_id: $("ps-eng").value,
+  };
+  if (kind === "tls_cipher_scan") {
+    const p = { url: $("tcs-url").value.trim(), engagement_id: $("tcs-eng").value };
+    const port = parseInt($("tcs-port").value, 10);
+    if (port) p.port = port;
+    return p;
+  }
+  if (kind === "dast_scan") return {
+    url: $("dast-url").value.trim(),
+    insecure: $("dast-insecure").checked,
+    engagement_id: $("dast-eng").value,
+  };
+  if (kind === "injection_scan") return {
+    url: $("inj-url").value.trim(),
+    insecure: $("inj-insecure").checked,
+    engagement_id: $("inj-eng").value,
+  };
+  if (kind === "csrf_probe") return {
+    url: $("csrf-url").value.trim(),
+    insecure: $("csrf-insecure").checked,
+    engagement_id: $("csrf-eng").value,
+  };
+  if (kind === "ssrf_probe") {
+    const p = {
+      url: $("ssrf-url").value.trim(),
+      insecure: $("ssrf-insecure").checked,
+      engagement_id: $("ssrf-eng").value,
+    };
+    const param = $("ssrf-param").value.trim();
+    if (param) p.param = param;
+    return p;
+  }
+  if (kind === "auth_attack_scan") {
+    const p = {
+      url: $("aas-url").value.trim(),
+      insecure: $("aas-insecure").checked,
+      engagement_id: $("aas-eng").value,
+    };
+    const login = $("aas-login").value.trim();
+    if (login) p.login_url = login;
+    return p;
+  }
+  if (kind === "idor_scan") {
+    const p = {
+      url: $("idor-url").value.trim(),
+      insecure: $("idor-insecure").checked,
+      engagement_id: $("idor-eng").value,
+    };
+    const cookie = $("idor-cookie").value.trim();
+    if (cookie) p.cookie = cookie;
+    return p;
+  }
+  const PROBES = ["redirects","headers","cookies","robots","security_paths","api_check","sitemap_test","dns_records","cors","transport"];
+  if (PROBES.includes(kind)) {
+    const t = $("pr-target").value.trim();
+    return kind === "dns_records" ? { host: t } : { url: t };
+  }
+  return {};
+}
+
+async function startJob(kind) {
+  const el = $("run-status");
+  el.classList.remove("err");
+  if (kind === "regression" && $("reg-update").checked
+      && !confirm("Update baselines? Current screenshots become the new reference.")) return;
+  try {
+    const res = await fetch("/api/dashboard/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind, params: jobParams(kind) }),
+    });
+    if (res.status === 409) { el.textContent = "a job is already in progress"; return; }
+    if (res.status === 400 || res.status === 422) {
+      const data = await res.json();
+      el.classList.add("err");
+      el.textContent = String(data.detail || "invalid request").slice(0, 90);
+      return;
+    }
+    $("job-result").style.display = "none";
+    await sync();
+    showPanel("overview", { scrollTarget: "job-live" });
+  } catch (err) {
+    el.classList.add("err");
+    el.textContent = "trigger failed: " + err;
+  }
+}
+$("btn-stop").addEventListener("click", async () => {
+  if (!confirm("Stop the running job?")) return;
+  await fetch("/api/dashboard/jobs/cancel", { method: "POST" });
+  toast("job", false, "cancellation requested");
+  sync();
+});
+$("btn-copylog").addEventListener("click", () => {
+  navigator.clipboard.writeText(window._lastLog || "").then(() => toast("copied", true, "log copied to clipboard"));
+});
+$("btn-dllog").addEventListener("click", () => {
+  const blob = new Blob([window._lastLog || ""], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "argus-job.log";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+for (const btn of document.querySelectorAll(".act-btn")) {
+  btn.addEventListener("click", () => startJob(btn.dataset.kind));
+}
+
+const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression", crawl_test: "crawl & test", audit: "site audit", flaky: "flaky check", screenshot: "screenshot", compare: "compare", ping: "uptime ping", loadtest: "load test", tls: "TLS check",
+  redirects: "redirect chain", headers: "HTTP headers", cookies: "cookie audit", robots: "robots/sitemap",
+  security_paths: "exposed paths", api_check: "API check", sitemap_test: "sitemap URLs", dns_records: "DNS records",
+  cors: "CORS check", transport: "compression", flow: "flow test", route_sweep: "route sweep",
+  api_contract: "API contract", api_contract_diff: "API contract diff", contract_verify: "contract verify",
+  auth_test: "auth & session", realtime: "live data", vitals: "web vitals", ai_flow: "AI test",
+  har_replay: "HAR record/replay", import_codegen: "import codegen",
+  misconfig_scan: "misconfig scan", cve_lookup: "CVE lookup", sca_scan: "SCA scan", llm_redteam: "LLM red-team",
+  exploit_poc: "exploit PoC", attack_chain: "attack chain", host_pentest: "host pentest", cloud_pentest: "cloud pentest",
+  db_assert: "DB assert", chaos_inject: "chaos inject", chaos_webhook: "chaos webhook",
+  port_scan: "port scan", tls_cipher_scan: "TLS cipher scan", dast_scan: "DAST scan",
+  injection_scan: "injection scan", csrf_probe: "CSRF probe", ssrf_probe: "SSRF probe",
+  auth_attack_scan: "auth attack scan", idor_scan: "IDOR scan" };
+
+let lastToastKey = "";
+function renderRunStatus(st) {
+  const el = $("run-status");
+  const busy = !!(st && st.running);
+  for (const btn of document.querySelectorAll(".act-btn")) btn.disabled = busy;
+
+  // live job panel: kind, elapsed, live pass/fail tally, per-test rows, streaming log
+  const live = $("job-live");
+  if (busy) {
+    const secs = st.started_at ? Math.max(0, (Date.now() - new Date(st.started_at).getTime()) / 1000 | 0) : 0;
+    live.style.display = "block";
+    $("live-kind").textContent = (KIND_LABELS[st.kind] || st.kind) + " — running";
+    $("live-elapsed").textContent = secs ? " · " + rel(secs) : "";
+    const t = st.live_tally || { passed: 0, failed: 0 };
+    $("live-tally").innerHTML = (t.passed || t.failed)
+      ? '· <span class="pass">' + t.passed + " ✓</span> "
+        + (t.failed ? '<span class="fail">' + t.failed + " ✗</span>" : "")
+      : "";
+    const lc = st.live_cases || [];
+    $("live-cases").innerHTML = lc.slice(-40).map((c) =>
+      '<span class="livecase ' + (c.status === "passed" ? "pass" : "fail") + '"><span class="dot"></span>'
+      + esc((c.status === "passed" ? "" : "✗ ") + c.title) + "</span>").join("");
+    const log = $("live-log");
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+    renderLiveLog(st.progress || [], true);
+    if (atBottom) log.scrollTop = log.scrollHeight;
+  } else {
+    live.style.display = "none";
+  }
+
+  if (busy) {
+    el.classList.remove("err");
+    el.textContent = "";
+  } else if (st && st.error) {
+    el.classList.add("err");
+    el.textContent = (KIND_LABELS[st.kind] || "job") + " failed: " + st.error.slice(0, 90);
+  } else {
+    el.classList.remove("err");
+    el.textContent = "";
+  }
+
+  // toast once per completed job (skip page-load backfill)
+  if (st && !st.running && st.finished_at) {
+    const key = st.finished_at + (st.kind || "");
+    if (lastToastKey && key !== lastToastKey) {
+      const r = st.result || {};
+      toast(KIND_LABELS[st.kind] || st.kind, !st.error,
+        st.error ? st.error.slice(0, 80)
+        : (r.total != null ? r.passed + "/" + r.total + " passed" : "completed"));
+      const clean = !st.error && r.total > 0 && r.failed === 0;
+      beep(clean && !st.error);
+    }
+    lastToastKey = key;
+  } else if (st && !st.finished_at && !lastToastKey) {
+    lastToastKey = "init";
+  }
+
+  renderFeed(st && st.recent);
+  renderJobResult(st);
+  ensureBusyPoll(busy);
+}
+
+function renderFeed(items) {
+  if (!items) return;
+  const el = $("feed");
+  if (!items.length) {
+    el.innerHTML = '<span class="d">No activity yet this session.</span>';
+    return;
+  }
+  el.innerHTML = items.map((it) => {
+    if (it.type === "webhook") {
+      return '<div class="feed-item"><span class="f-when">' + relIso(it.at) + '</span>'
+        + '<span class="f-kind">🪝 ' + esc(it.event) + '</span>'
+        + '<span class="f-brief">' + esc((it.repo || "") + (it.detail ? " · " + it.detail : "")) + "</span></div>";
+    }
+    return '<div class="feed-item"><span class="f-when">' + relIso(it.at) + '</span>'
+      + '<span class="f-kind">' + (it.ok ? "✅" : "❌") + " " + esc(KIND_LABELS[it.kind] || it.kind) + '</span>'
+      + '<span class="f-brief">' + esc(it.brief) + " · " + rel(it.duration_s | 0) + "</span></div>";
+  }).join("");
+}
+
+let lastResultKey = "";
+function renderJobResult(st) {
+  const panel = $("job-result");
+  if (!st || st.running || (!st.result && !st.error)) return;
+  const key = (st.finished_at || "") + (st.kind || "");
+  if (key === lastResultKey && panel.style.display !== "none") return;
+  lastResultKey = key;
+  const r = st.result || {};
+  let dur = "";
+  if (st.started_at && st.finished_at) {
+    dur = ' <span class="d" style="font-weight:400">· took ' + rel(Math.max(0, (new Date(st.finished_at) - new Date(st.started_at)) / 1000 | 0)) + "</span>";
+  }
+  let html = '<div class="result-title">' + esc(KIND_LABELS[st.kind] || st.kind) + " result" + dur + "</div>";
+
+  const caseTable = (cases) => {
+    if (!cases || !cases.length) return "";
+    const fails = cases.filter((c) => c.status !== "passed");
+    let out = "";
+    if (fails.length) {
+      out += '<div class="err-summary"><div class="k">⚠ ' + fails.length + " failure(s)</div>"
+        + fails.map((c) => '<div style="margin-bottom:8px"><b>' + esc(c.title) + "</b> "
+          + '<button class="copy-btn" data-copy="' + encodeURIComponent(c.error || "") + '">⧉ copy</button>'
+          + (c.hint ? '<div style="color:var(--accent-2);font-size:0.875rem;margin:2px 0">💡 ' + esc(c.hint) + "</div>" : "")
+          + '<div class="case-err">' + esc((c.error || "").slice(0, 600))
+          + (c.console_logs && c.console_logs.length ? "\nconsole: " + esc(c.console_logs.join("\n")) : "")
+          + (c.network_errors && c.network_errors.length ? "\nnetwork: " + esc(c.network_errors.join("\n")) : "")
+          + "</div></div>").join("") + "</div>";
+    }
+    out += '<div style="margin:6px 0"><label class="chk"><input type="checkbox" id="fails-only"> failures only</label></div>';
+    out += '<table class="runs-table" id="case-table"><tbody>'
+      + cases.map((c) => '<tr class="case-row ' + (c.status === "passed" ? "" : "is-fail") + '">'
+        + '<td><span class="chip ' + (c.status === "passed" ? "pass" : "fail") + '">'
+        + (c.status === "passed" ? "PASS" : esc((c.status || "fail").toUpperCase())) + "</span></td>"
+        + "<td>" + esc(c.title) + (c.browser ? ' <span class="d">' + esc(c.browser) + "</span>" : "") + "</td>"
+        + '<td class="d">' + (c.duration_ms != null ? c.duration_ms + "ms" : "") + "</td>"
+        + "<td>" + (c.video ? '<a class="rlink" href="' + esc(c.video) + '" target="_blank">🎬</a> ' : "")
+        + (c.trace ? '<a class="rlink" href="' + esc(c.trace) + '" target="_blank">🔍</a>' : "") + "</td>"
+        + '<td style="max-width:420px;color:var(--status-error);font-size:0.875rem">' + esc((c.error || "").slice(0, 200)) + "</td></tr>").join("")
+      + "</tbody></table>";
+    return out;
+  };
+
+  const downloadRow = (rep) => {
+    if (!rep || (!rep.csv && !rep.html && !rep.md && !rep.pdf)) return "";
+    return '<div class="dl-row">Download: '
+      + (rep.html ? '<a class="dl-btn" href="' + esc(rep.html) + '" target="_blank" title="Open the full formatted report">⬇ HTML</a>' : "")
+      + (rep.pdf ? '<a class="dl-btn" href="/api/dashboard/jobs/report.pdf" title="Print-ready PDF for sharing">⬇ PDF</a>' : "")
+      + (rep.md ? '<a class="dl-btn" href="/api/dashboard/jobs/report.md" title="Markdown — pastes cleanly into a GitHub issue, PR, or Slack message">⬇ Markdown</a>'
+        + '<button class="dl-btn" id="btn-copy-md" title="Copy the Markdown report straight to your clipboard">⧉ Copy MD</button>' : "")
+      + (rep.csv ? '<a class="dl-btn" href="/api/dashboard/jobs/report.csv" title="Raw rows for a spreadsheet">⬇ CSV</a>' : "")
+      + '<button class="dl-btn" id="btn-rerun">⟳ Rerun</button></div>';
+  };
+
+  // generic probe result: {summary, status, columns, rows, issues}
+  if (!st.error && r.columns && r.rows) {
+    const sc = r.status === "ok" ? "pass" : r.status === "warn" ? "" : "fail";
+    html += '<div class="d"><span class="chip ' + sc + '" style="' + (r.status === "warn" ? "color:var(--status-warn)" : "") + '">'
+      + esc((r.status || "").toUpperCase()) + "</span> " + esc(r.summary || "") + "</div>";
+    if (r.issues && r.issues.length) {
+      html += '<div class="err-summary" style="margin:8px 0">' + r.issues.map((i) => '<div class="case-err">' + esc(i) + "</div>").join("") + "</div>";
+    }
+    html += '<div style="overflow-x:auto"><table class="runs-table" style="margin-top:6px"><tbody>'
+      + "<tr>" + r.columns.map((c) => "<th style=\"text-align:left;color:var(--text-muted);font-size:11px\">" + esc(c) + "</th>").join("") + "</tr>"
+      + r.rows.map((row) => "<tr>" + row.map((cell, ci) => "<td" + (ci === 0 ? ' class="d"' : "") + ">" + esc(String(cell)) + "</td>").join("") + "</tr>").join("")
+      + "</tbody></table></div>";
+    panel.innerHTML = html;
+    panel.style.display = "block";
+    return;
+  }
+
+  if (st.error) {
+    html += '<div class="result-err">' + esc(st.error) + "</div>";
+    if (st.progress && st.progress.length) {
+      html += '<pre class="terminal-log-snippet">' + colorizeLogText(st.progress.slice(-12)) + "</pre>";
+    }
+  } else if (st.kind === "discover") {
+    html += '<div class="d">' + r.inventory + " candidates · " + r.gaps_total + " gaps · " + r.files_scanned + " files scanned</div>";
+    if (r.gaps && r.gaps.length) {
+      html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+        + r.gaps.map((g) => "<tr><td>" + esc(g.kind) + "</td><td>" + esc(g.path) + "</td><td>" + esc(g.title) + "</td><td>" + esc(g.priority) + "</td></tr>").join("")
+        + "</tbody></table>";
+    }
+  } else if (st.kind === "generate" || st.kind === "create") {
+    const files = r.generated || [];
+    html += '<div class="d">' + files.length + " test file(s) generated"
+      + (r.requirements != null ? " from " + r.requirements + " requirement(s)" : "")
+      + (r.total != null ? " · executed: " + r.passed + "/" + r.total + " passed" : "") + "</div>";
+    html += '<div class="result-files" style="margin-top:6px">' + files.map(esc).join("<br>") + "</div>";
+  } else if (st.kind === "ai_flow") {
+    html += '<div class="d"><b class="' + (r.success ? "pass" : "fail") + '">' + (r.success ? "✅ goal achieved" : "⚠ stopped") + "</b> · "
+      + esc(r.goal) + ' <span class="d">· ' + esc(r.mode || "") + " agent</span></div>";
+    if (r.summary) html += '<div class="d" style="margin:4px 0">' + esc(r.summary) + "</div>";
+    if (r.video) html += '<video controls src="' + esc(r.video) + '" style="max-width:min(920px,100%);width:100%;border:1px solid var(--separator);border-radius:12px;margin:10px 0"></video>';
+    if (r.trace) html += '<div class="dl-row" style="margin:2px 0 8px">🔍 <a class="rlink" href="' + esc(r.trace) + '" target="_blank">download trace.zip</a></div>';
+    html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+      + (r.ai_steps || []).map((s) => "<tr><td>" + s.n + "</td>"
+        + '<td><span class="chip ' + (s.status === "passed" ? "pass" : "fail") + '">' + (s.status === "passed" ? "OK" : "FAIL") + "</span></td>"
+        + "<td>" + esc(s.desc || s.action) + "</td>"
+        + "<td>" + (s.shot ? '<a class="rlink" href="' + esc(s.shot) + '" target="_blank">shot</a>' : "")
+        + '</td><td class="d" style="color:var(--status-error);max-width:300px">' + esc(s.error || "") + "</td></tr>").join("")
+      + "</tbody></table>";
+  } else if (st.kind === "flow") {
+    html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total + " steps passed</b> · "
+      + esc(r.url) + " · parsed by " + esc(r.mode)
+      + (r.browser && r.browser !== "chromium" ? " · " + esc(r.browser) : "")
+      + (r.device && r.device !== "desktop" ? " · " + esc(r.device) : "")
+      + (r.throttle && r.throttle !== "none" ? " · " + esc(r.throttle) : "") + "</div>";
+    if (r.video) html += '<video controls src="' + esc(r.video) + '" style="max-width:min(920px,100%);width:100%;border:1px solid var(--separator);border-radius:12px;margin:10px 0"></video>';
+    if (r.trace) html += '<div class="dl-row" style="margin:2px 0 8px">🔍 <a class="rlink" href="' + esc(r.trace) + '" target="_blank">download trace.zip</a> <span class="d">— open at trace.playwright.dev for step-by-step DOM/network/console</span></div>';
+    html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+      + (r.flow_steps || []).map((s) => "<tr><td>" + s.n + "</td>"
+        + '<td><span class="chip ' + (s.status === "passed" ? "pass" : "fail") + '">' + (s.status === "passed" ? "PASS" : "FAIL") + "</span></td>"
+        + "<td>" + esc(s.desc) + "</td>"
+        + "<td>" + (s.shot ? '<a class="rlink" href="' + esc(s.shot) + '" target="_blank">shot</a>' : "") + "</td>"
+        + '<td style="color:var(--status-error);font-size:0.875rem;max-width:480px">' + esc(s.error || "")
+        + (s.hint ? '<div style="color:var(--accent-2)">💡 ' + esc(s.hint) + "</div>" : "") + "</td></tr>").join("")
+      + "</tbody></table>";
+  } else if (st.kind === "route_sweep") {
+    html += '<div class="d">' + r.routes + " route(s) × " + (r.viewports || []).join("/") + " · "
+      + (r.baselines_updated ? '<span class="pass">' + r.new_baselines + " baseline(s) captured</span>"
+         : '<span class="' + (r.fail_count ? "fail" : "pass") + '">' + r.fail_count + " changed</span>") + "</div>";
+    html += '<div style="overflow-x:auto"><table class="runs-table" style="margin-top:6px"><tbody>'
+      + "<tr><th>route</th><th>viewport</th><th>status</th><th>diff</th><th></th></tr>"
+      + (r.sweep_rows || []).map((x) => "<tr><td>" + esc(x.route) + "</td><td class=\"d\">" + esc(x.viewport) + "</td>"
+        + '<td style="color:' + (x.status === "fail" ? "var(--status-error)" : x.status === "baseline" ? "var(--status-warn)" : "var(--status-ok)") + '">' + esc(x.status) + "</td>"
+        + "<td>" + (x.diff || 0) + "%</td>"
+        + '<td><a class="rlink" href="' + esc(x.cur) + '" target="_blank">view</a></td></tr>').join("")
+      + "</tbody></table></div>";
+  } else if (st.kind === "api_contract") {
+    html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total
+      + " checks passed</b> · " + esc(r.url) + " · " + esc(r.mode) + " mode</div>";
+    const rows = r.mode === "spec" ? (r.endpoints || []) : (r.steps || []);
+    html += '<div style="overflow-x:auto"><table class="runs-table" style="margin-top:6px"><tbody>'
+      + (r.mode === "spec" ? "<tr><th>method</th><th>path</th><th>status</th><th>result</th><th>schema / note</th><th>ms</th></tr>"
+                           : "<tr><th>#</th><th>step</th><th>status</th><th>result</th><th>error</th><th>ms</th></tr>")
+      + rows.map((x) => "<tr>"
+        + (r.mode === "spec"
+            ? "<td><b>" + esc(x.method) + "</b></td><td><code>" + esc(x.path) + "</code></td><td>" + x.status + "</td>"
+              + '<td><span class="chip ' + (x.ok ? "pass" : "fail") + '">' + (x.ok ? "OK" : "FAIL") + "</span></td>"
+              + '<td style="color:var(--status-error);font-size:0.875rem;max-width:480px">' + esc((x.schema_errors || []).join("; ") || x.note || "") + "</td>"
+            : "<td>" + x.n + "</td><td>" + esc(x.desc) + "</td><td>" + x.status + "</td>"
+              + '<td><span class="chip ' + (x.ok ? "pass" : "fail") + '">' + (x.ok ? "OK" : "FAIL") + "</span></td>"
+              + '<td style="color:var(--status-error);font-size:0.875rem;max-width:480px">' + esc(x.error || "") + "</td>")
+        + "<td>" + (x.latency_ms || 0) + "</td></tr>").join("")
+      + "</tbody></table></div>";
+  } else if (st.kind === "vitals") {
+    const gc = (g) => g === "good" ? "var(--status-ok)" : g === "poor" ? "var(--status-error)" : "var(--status-warn)";
+    html += '<div class="d">overall <b style="color:' + gc(r.overall) + '">' + esc((r.overall || "").toUpperCase()) + "</b> · "
+      + esc(r.url) + " · " + esc(r.device || "desktop") + (r.throttle && r.throttle !== "none" ? " · " + esc(r.throttle) : "") + "</div>";
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+      + Object.entries(r.metrics || {}).map(([k, m]) =>
+          '<div class="stat-tile" style="padding:8px 12px"><span class="stat-label">' + k + '</span>'
+          + '<span class="stat-value" style="font-size:1rem;color:' + gc(m.grade) + '">'
+          + (m.value == null ? "—" : m.value + (k === "CLS" ? "" : "ms")) + "</span></div>").join("") + "</div>";
+    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" style="max-width:min(920px,100%);width:100%;border:1px solid var(--separator);border-radius:12px;margin-top:10px">';
+  } else if (st.kind === "realtime") {
+    html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total + " checks passed</b> · " + esc(r.url)
+      + (r.live ? " · page <b style=\"color:" + (r.live.classification === "ok" ? "var(--status-ok)" : "var(--status-error)") + '">' + esc(r.live.classification) + "</b>" : "") + "</div>";
+    html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+      + (r.checks || []).map((c) => "<tr>"
+        + '<td><span class="chip ' + (c.ok ? "pass" : "fail") + '">' + (c.ok ? "OK" : "FAIL") + "</span></td>"
+        + "<td>" + esc(c.name) + '</td><td class="d">' + esc(c.detail || "") + "</td></tr>").join("")
+      + "</tbody></table>";
+    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" style="max-width:min(920px,100%);width:100%;border:1px solid var(--separator);border-radius:12px;margin-top:10px">';
+  } else if (st.kind === "auth_test") {
+    html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total + " checks passed</b> · " + esc(r.url)
+      + (r.session_name ? ' · session <code>' + esc(r.session_name) + "</code> (reuse via <b>session</b> on flow/live-data)" : "") + "</div>";
+    html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+      + (r.checks || []).map((c) => "<tr>"
+        + '<td><span class="chip ' + (c.ok ? "pass" : "fail") + '">' + (c.ok ? "OK" : "FAIL") + "</span></td>"
+        + "<td>" + esc(c.name) + '</td><td class="d">' + esc(c.detail || "") + "</td></tr>").join("")
+      + "</tbody></table>";
+    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" style="max-width:min(920px,100%);width:100%;border:1px solid var(--separator);border-radius:12px;margin-top:10px">';
+  } else if (st.kind === "har_replay") {
+    html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total + " checks</b> · "
+      + esc(r.mode || "") + " · " + esc(r.base || r.url || "")
+      + (r.har ? ' · <code>' + esc(r.har_rel || r.har) + "</code>" : "") + "</div>";
+    html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+      + (r.checks || []).map((c) => "<tr>"
+        + '<td><span class="chip ' + (c.ok ? "pass" : "fail") + '">' + (c.ok ? "OK" : "FAIL") + "</span></td>"
+        + "<td>" + esc(c.name) + '</td><td class="d">' + esc(c.detail || "") + "</td></tr>").join("")
+      + "</tbody></table>";
+    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" style="max-width:min(920px,100%);width:100%;border:1px solid var(--separator);border-radius:12px;margin-top:10px">';
+  } else if (st.kind === "import_codegen") {
+    const steps = r.imported_steps || r.steps || [];
+    html += '<div class="d">imported <b>' + (r.step_count || steps.length) + "</b> step(s)"
+      + (r.total != null ? " · flow " + r.passed + "/" + r.total + " passed" : " (parse only)") + "</div>";
+    if (steps.length) {
+      html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+        + steps.map((s, i) => "<tr><td class=\"d\">" + (i + 1) + "</td><td>" + esc(s.action) + "</td>"
+          + "<td>" + esc(s.target || s.assertion || s.value || "") + "</td></tr>").join("")
+        + "</tbody></table>";
+    }
+    if (r.video) html += '<video controls src="' + esc(r.video) + '" style="max-width:min(920px,100%);width:100%;border:1px solid var(--separator);border-radius:12px;margin:10px 0"></video>';
+  } else if (st.kind === "loadtest") {
+    html += '<div class="d">' + esc(r.url) + " — " + r.requests + " requests · " + r.concurrency + " concurrent · "
+      + '<b>' + r.rps + " req/s</b> · <span class=\"" + (r.success_pct >= 99 ? "pass" : "fail") + '">' + r.success_pct + "% ok</span></div>";
+    const cell = (k, v) => '<div class="stat-tile" style="padding:8px 12px"><span class="stat-label">' + k + '</span><span class="stat-value" style="font-size:1rem">' + v + "ms</span></div>";
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+      + cell("p50", r.p50) + cell("p95", r.p95) + cell("p99", r.p99) + cell("max", r.max) + cell("mean", r.mean) + "</div>";
+  } else if (st.kind === "tls") {
+    const sc = r.status === "ok" ? "pass" : "fail";
+    html += '<div class="d"><span class="chip ' + sc + '">' + esc(r.status.toUpperCase()) + "</span> "
+      + esc(r.host) + ":" + r.port + " → " + esc((r.ips || []).join(", ")) + "</div>";
+    const row = (k, v) => "<tr><td class=\"d\" style=\"width:130px\">" + k + "</td><td>" + esc(String(v)) + "</td></tr>";
+    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+      + row("expires in", (r.days_left != null ? r.days_left + " days" : "?") + " (" + esc(r.expiry || "") + ")")
+      + row("issuer", r.issuer) + row("subject", r.subject)
+      + row("protocol", r.protocol + " · " + r.cipher)
+      + row("SANs", (r.sans || []).slice(0, 8).join(", ")) + "</tbody></table>";
+  } else if (st.kind === "compare") {
+    const same = r.identical;
+    html += '<div class="d">' + (same ? '<span class="pass">identical</span>' : '<span class="fail">' + r.diff_percent + "% different</span>")
+      + " — " + esc(r.url_a) + " vs " + esc(r.url_b) + "</div>";
+    html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">'
+      + [["A", r.a_href], ["B", r.b_href], ["diff", r.diff_href]].map(([lbl, href]) =>
+        '<div><div class="d" style="margin-bottom:4px">' + lbl + "</div>"
+        + '<a href="' + esc(href) + '" target="_blank"><img src="' + esc(href) + '" style="max-width:230px;border:1px solid var(--separator);border-radius:8px"></a></div>').join("")
+      + "</div>";
+  } else if (st.kind === "ping") {
+    html += '<div class="d"><span class="pass">' + r.up + " up</span>"
+      + (r.down ? ' · <span class="fail">' + r.down + " down</span>" : "") + " of " + r.total + "</div>";
+    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+      + (r.results || []).map((x) => "<tr><td><span class=\"chip " + (x.ok ? "pass" : "fail") + '">' + (x.status || "ERR") + "</span></td>"
+        + "<td>" + esc(x.url) + "</td><td class=\"d\">" + (x.ms != null ? x.ms + "ms" : esc(x.error || "")) + "</td></tr>").join("")
+      + "</tbody></table>";
+  } else if (st.kind === "screenshot") {
+    html += '<div class="d">' + esc(r.url) + " — HTTP " + (r.status || "?") + " · " + esc(r.title || "") + "</div>";
+    html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">'
+      + (r.shots || []).map((s) => '<div><div class="d" style="margin-bottom:4px">' + esc(s.viewport) + " · " + s.width + "×" + s.height + '</div>'
+        + '<a href="' + esc(s.href) + '" target="_blank"><img src="' + esc(s.href) + '" style="max-width:280px;border:1px solid var(--separator);border-radius:8px"></a></div>').join("")
+      + "</div>";
+  } else if (st.kind === "audit") {
+    const checks = r.checks || [];
+    const gc = r.grade === "A" ? "var(--status-ok)" : r.grade === "F" || r.grade === "D" ? "var(--status-error)" : "var(--status-warn)";
+    html += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">'
+      + '<div style="font-size:44px;font-weight:800;line-height:1;color:' + gc + '">' + esc(r.grade || "?") + "</div>"
+      + '<div><div style="font-weight:600">Health score ' + (r.score != null ? r.score + "/100" : "") + "</div>"
+      + '<div class="d">' + esc(r.url) + " — " + r.pages_audited + " page(s) · "
+      + '<span class="fail">' + r.fail_count + " failing</span> · "
+      + '<span style="color:var(--status-warn)">' + r.warn_count + " warnings</span></div></div></div>";
+    // summary tiles per check
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">'
+      + checks.map((c) => { const b = (r.by_check || {})[c] || {}; return '<span class="chip">' + esc(c) + ': '
+        + '<span class="pass">' + (b.ok || 0) + "✓</span>"
+        + (b.warn ? ' <span style="color:var(--status-warn)">' + b.warn + "!</span>" : "")
+        + (b.fail ? ' <span class="fail">' + b.fail + "✗</span>" : "") + "</span>"; }).join("") + "</div>";
+    // pages × checks matrix
+    html += '<div style="overflow-x:auto"><table class="runs-table"><tbody>'
+      + "<tr><td><b>Page</b></td>" + checks.map((c) => "<td><b>" + esc(c) + "</b></td>").join("") + "</tr>"
+      + (r.audit_pages || []).map((p) => "<tr><td>" + esc(p.path) + '</td>'
+        + checks.map((c) => { const chk = (p.checks || {})[c]; if (!chk) return '<td class="d">–</td>';
+          const col = chk.status === "ok" ? "var(--status-ok)" : chk.status === "warn" ? "var(--status-warn)" : "var(--status-error)";
+          const iss = (chk.issues || []).join("\n");
+          return '<td title="' + esc(iss) + '" style="color:' + col + ';cursor:' + (iss ? "help" : "default") + '">' + esc(chk.status) + "</td>"; }).join("")
+        + "</tr>").join("")
+      + "</tbody></table></div>";
+  } else if (st.kind === "flaky") {
+    html += '<div class="d">' + r.runs + " runs · <b class=\"" + (r.flaky_count ? "fail" : "pass") + "\">"
+      + r.flaky_count + " flaky test(s)</b></div>";
+    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+      + (r.flaky_cases || []).slice(0, 30).map((c) => "<tr><td>"
+        + '<span class="chip ' + (c.status === "passed" ? "pass" : "fail") + '">'
+        + (c.status === "flaky" ? "FLAKY" : c.status.toUpperCase()) + "</span></td>"
+        + "<td>" + esc(c.title) + "</td><td>" + c.passes + "/" + c.runs + " passed</td>"
+        + '<td>' + (c.flake_pct ? '<span class="fail">' + c.flake_pct + "% flake</span>" : "") + "</td></tr>").join("")
+      + "</tbody></table>";
+  } else if (st.kind === "regression") {
+    html += '<div class="d">' + (r.baselines_updated ? "baselines updated · " : "") + (r.diffs || []).length + " screenshot(s) compared</div>";
+    if (r.diffs && r.diffs.length) {
+      html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+        + r.diffs.map((d) => "<tr><td>" + esc(d.file) + '</td><td><span class="chip ' + (d.status === "fail" ? "fail" : "pass") + '">' + esc(d.status) + "</span></td><td>" + (d.diff_percent ?? 0) + "%</td><td>"
+          + (d.diff_href ? '<a class="rlink" href="' + esc(d.diff_href) + '" target="_blank">diff image</a>' : esc(d.message || "")) + "</td></tr>").join("")
+        + "</tbody></table>";
+    }
+  } else if (st.kind === "misconfig_scan") {
+    const gc = r.grade === "A" ? "var(--status-ok)" : (r.grade === "F" || r.grade === "D") ? "var(--status-error)" : "var(--status-warn)";
+    html += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">'
+      + '<div style="font-size:44px;font-weight:800;line-height:1;color:' + gc + '">' + esc(r.grade || "?") + "</div>"
+      + '<div><div style="font-weight:600">Score ' + (r.score != null ? r.score + "/100" : "") + "</div>"
+      + '<div class="d">' + esc(r.url) + " — " + ((r.paths && r.paths.exposed) || []).length + " exposed path(s) · headers "
+      + esc((r.headers && r.headers.status) || "?") + "</div></div></div>";
+    if (r.tech && ((r.tech.signatures && r.tech.signatures.length) || (r.tech.versions && r.tech.versions.length))) {
+      html += '<div class="d" style="margin-bottom:6px">detected: ' + esc((r.tech.signatures || []).join(", "))
+        + " " + (r.tech.versions || []).map((v) => esc(v.product + " " + v.version)).join(", ") + "</div>";
+    }
+    html += '<div class="d">findings, if any, appear in the 🐞 Findings panel below.</div>';
+  } else if (st.kind === "cve_lookup") {
+    html += '<div class="d">' + esc(r.url) + " — <b class=\"" + (r.total_matches ? "fail" : "pass") + '">'
+      + r.total_matches + " known advisory match(es)</b> across " + (r.identified || []).length + " identified component(s)</div>";
+    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+      + "<tr><th>product</th><th>version</th><th>matches</th></tr>"
+      + (r.results || []).map((x) => "<tr><td>" + esc(x.product) + "</td><td>" + esc(x.version) + "</td><td>"
+        + ((x.matches && x.matches.length)
+            ? x.matches.map((m) => '<span class="chip fail">' + esc(m.id) + "</span>").join(" ")
+            : ('<span class="d">' + esc(x.note || (x.error ? "lookup error" : "none")) + "</span>")) + "</td></tr>").join("")
+      + "</tbody></table>";
+  } else if (st.kind === "llm_redteam") {
+    const gc = r.grade === "A" ? "var(--status-ok)" : (r.grade === "F" || r.grade === "D") ? "var(--status-error)" : "var(--status-warn)";
+    html += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">'
+      + '<div style="font-size:44px;font-weight:800;line-height:1;color:' + gc + '">' + esc(r.grade || "?") + "</div>"
+      + '<div><div style="font-weight:600">' + r.resisted + "/" + r.total + " prompts resisted</div>"
+      + '<div class="d">target: ' + esc(r.target) + "</div></div></div>";
+    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+      + "<tr><th>attack</th><th>category</th><th>result</th></tr>"
+      + (r.results || []).map((x) => "<tr><td><code>" + esc(x.id) + "</code></td><td class=\"d\">" + esc(x.category) + "</td><td>"
+        + (x.resisted == null ? '<span class="chip">error</span>' : '<span class="chip ' + (x.resisted ? "pass" : "fail") + '">' + (x.resisted ? "resisted" : "COMPROMISED") + "</span>") + "</td></tr>").join("")
+      + "</tbody></table>";
+  } else if (st.kind === "exploit_poc" || st.kind === "host_pentest" || st.kind === "cloud_pentest") {
+    const label = st.kind === "exploit_poc" ? esc(r.url) : st.kind === "host_pentest" ? esc(r.host) : esc(r.provider) + ":" + esc(r.target);
+    html += '<div class="d"><span class="chip ' + (r.verified ? "fail" : "pass") + '">' + (r.verified ? "VERIFIED" : "not verified") + "</span> "
+      + label + (r.timed_out ? ' · <span style="color:var(--status-warn)">timed out</span>' : "") + "</div>";
+    if (r.reason) html += '<div class="d" style="margin-top:6px">' + esc(r.reason) + "</div>";
+    html += '<div class="d" style="margin-top:8px">PoC: <code>' + esc(r.poc_path || "") + "</code> (sha256 " + esc((r.code_sha256 || "").slice(0, 12)) + "…)</div>";
+    if (r.stdout) html += '<pre style="margin-top:8px;max-height:220px;overflow:auto;font-size:.8rem">' + esc(r.stdout) + "</pre>";
+  } else if (st.kind === "attack_chain") {
+    html += '<div class="d">' + r.confirmed_count + "/" + (r.steps || []).length + " step(s) confirmed — " + esc(r.stop_reason) + "</div>";
+    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+      + "<tr><th>step</th><th>description</th><th>result</th></tr>"
+      + (r.steps || []).map((s) => "<tr><td>" + s.step + "</td><td>" + esc(s.description) + "</td><td>"
+        + '<span class="chip ' + (s.verified ? "fail" : "pass") + '">' + (s.verified ? "VERIFIED" : "not verified") + "</span></td></tr>").join("")
+      + "</tbody></table>";
+  } else if (st.kind === "port_scan") {
+    html += '<div class="d">' + esc(r.host) + " — <b>" + (r.open_ports || []).length + " open</b> of " + (r.scanned || 0) + " scanned</div>";
+    html += '<div class="d" style="margin-top:6px">' + esc((r.open_ports || []).join(", ") || "none") + "</div>";
+  } else if (st.kind === "tls_cipher_scan") {
+    const gc = r.grade === "A" ? "var(--status-ok)" : (r.grade === "F" || r.grade === "D") ? "var(--status-error)" : "var(--status-warn)";
+    html += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">'
+      + '<div style="font-size:44px;font-weight:800;line-height:1;color:' + gc + '">' + esc(r.grade || "?") + "</div>"
+      + '<div><div style="font-weight:600">' + esc((r.negotiated && r.negotiated.cipher) || "no handshake") + "</div>"
+      + '<div class="d">' + esc(r.host) + ":" + (r.port || 443) + "</div></div></div>";
+    if ((r.issues || []).length) html += '<ul class="d">' + r.issues.map((i) => "<li>" + esc(i) + "</li>").join("") + "</ul>";
+  } else if (["dast_scan","injection_scan","csrf_probe","ssrf_probe","auth_attack_scan","idor_scan"].includes(st.kind)) {
+    const items = r.findings || [];
+    html += '<div class="d">' + esc(r.url || "") + " — <b class=\"" + (items.length ? "fail" : "pass") + '">'
+      + items.length + " finding(s)</b></div>";
+    if (items.length) {
+      html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+        + "<tr><th>sev</th><th>title</th><th>where</th></tr>"
+        + items.map((f) => "<tr><td><span class=\"chip fail\">" + esc(f.severity || "") + "</span></td><td>"
+          + esc(f.title || "") + "</td><td class=\"d\">" + esc(f.where || "") + "</td></tr>").join("")
+        + "</tbody></table>";
+    }
+  } else {
+    html += '<div class="d">' + r.passed + "/" + r.total + " passed"
+      + (r.report ? ' · <a class="rlink" href="' + esc(r.report) + '" target="_blank">📄 open report</a>' : "") + "</div>";
+    if (r.generated && r.generated.length) {
+      html += '<div class="result-files" style="margin-top:6px">' + r.generated.map(esc).join("<br>") + "</div>";
+    }
+    html += caseTable(r.cases);
+  }
+  if (r.report) html += downloadRow(r.report);
+  else if (st.kind && !st.error) html += '<div class="dl-row"><button class="dl-btn" id="btn-rerun">⟳ Rerun</button></div>';
+  panel.innerHTML = html;
+  panel.style.display = "block";
+
+  // wire result-panel controls
+  const failsOnly = document.getElementById("fails-only");
+  if (failsOnly) failsOnly.addEventListener("change", () => {
+    for (const row of document.querySelectorAll("#case-table .case-row")) {
+      row.style.display = (failsOnly.checked && !row.classList.contains("is-fail")) ? "none" : "";
+    }
+  });
+  for (const b of panel.querySelectorAll(".copy-btn")) {
+    b.addEventListener("click", () => {
+      navigator.clipboard.writeText(decodeURIComponent(b.dataset.copy || "")).then(() => toast("copied", true, "error copied to clipboard"));
+    });
+  }
+  const rerun = document.getElementById("btn-rerun");
+  if (rerun) rerun.addEventListener("click", async () => {
+    const res = await fetch("/api/dashboard/jobs/rerun", { method: "POST" });
+    if (res.status === 409) { toast("rerun", false, "a job is already running"); return; }
+    $("job-result").style.display = "none";
+    sync();
+  });
+  const copyMd = document.getElementById("btn-copy-md");
+  if (copyMd) copyMd.addEventListener("click", async () => {
+    try {
+      const md = await fetch("/api/dashboard/jobs/report.md").then((res) => res.text());
+      await navigator.clipboard.writeText(md);
+      toast("report", true, "Markdown copied — paste into a GitHub issue, PR, or Slack message");
+    } catch (err) {
+      toast("report", false, "Clipboard unavailable");
+    }
+  });
+}
+
+/* fast 2s status poll while a job is running, so the live log streams */
+let busyPoll = null;
+function ensureBusyPoll(busy) {
+  if (busy && !busyPoll) {
+    busyPoll = setInterval(async () => {
+      try {
+        const st = await fetch("/api/dashboard/jobs/status").then((r) => r.json());
+        renderRunStatus(st);
+        if (!st.running) {
+          clearInterval(busyPoll); busyPoll = null; sync();
+          if (videosOpen) loadVideos();
+        }
+      } catch (e) { /* next tick */ }
+    }, 2000);
+  } else if (!busy && busyPoll) {
+    clearInterval(busyPoll); busyPoll = null;
+  }
+}
+
+async function sync() {
+  try {
+    const [overview, pods, runs, runSt] = await Promise.all([
+      fetch("/api/dashboard/overview").then((r) => r.json()),
+      fetch("/api/dashboard/pods").then((r) => r.json()),
+      fetch("/api/dashboard/runs").then((r) => r.json()),
+      fetch("/api/dashboard/jobs/status").then((r) => r.json()),
+    ]);
+    const runList = runs.runs || [];
+    renderHero(overview, pods, runList);
+    renderWorkloads(overview.workloads);
+    renderPods(pods);
+    renderRuns(runList);
+    renderRunStatus(runSt);
+    $("report-link").style.display = overview.report_available ? "inline" : "none";
+    $("pdf-link").style.display = overview.pdf_available ? "inline" : "none";
+    if (overview.auth && overview.auth.enabled) {
+      $("session").style.display = "inline";
+      $("session-user").textContent = overview.auth.user;
+    }
+    await refreshDrawer();
+    loadKnowledgeStatus();
+    lastSync = Date.now();
+  } catch (err) {
+    $("sync").textContent = "sync failed: " + err;
+  }
+}
+setInterval(() => {
+  if (lastSync) $("sync").textContent = "synced " + rel((Date.now() - lastSync) / 1000 | 0) + " ago";
+}, 1000);
+
+let refreshTimer = null;
+function setRefreshRate(ms) {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = ms > 0 ? setInterval(() => { sync(); if (eventsOpen) loadEvents(); }, ms) : null;
+}
+$("refresh-rate").value = String(localStorage.getItem("zyvor-refresh") || REFRESH);
+$("refresh-rate").addEventListener("change", () => {
+  localStorage.setItem("zyvor-refresh", $("refresh-rate").value);
+  setRefreshRate(parseInt($("refresh-rate").value, 10));
+});
+sync();
+loadTestHealth();
+loadSchedules();
+loadFindings();
+loadEngagements();
+loadRequirements();
+loadRequirementImpact();
+setInterval(loadSchedules, 15000);
+setInterval(loadFindings, 15000);
+setInterval(loadEngagements, 30000);
+setInterval(loadRequirements, 30000);
+setInterval(loadRequirementImpact, 30000);
+setRefreshRate(parseInt($("refresh-rate").value, 10) || REFRESH);
+
+
+document.getElementById("topbar-palette")?.addEventListener("click", () => openPalette());
+</script>

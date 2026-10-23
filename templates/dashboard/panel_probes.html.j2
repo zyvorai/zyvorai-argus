@@ -1,0 +1,51 @@
+<section id="panel-probes" class="panel">
+  <div class="panel-head">
+    <h1>Probes</h1>
+    <p>Uptime, load, TLS, and one-shot network checks.</p>
+  </div>
+  <div class="acts">
+<div class="glass card act" id="action-ping">
+      <div class="act-title">📡 Uptime ping — status &amp; latency across URLs</div>
+      <div class="act-row"><textarea class="inp grow" id="pg-urls" rows="2" placeholder="one URL per line"></textarea></div>
+      <div class="act-row"><button class="run-btn act-btn" data-kind="ping" style="margin-left:auto">📡 Ping all</button></div>
+    </div>
+    
+<div class="glass card act" id="action-loadtest">
+      <div class="act-title">⏱ Load test — latency under concurrency</div>
+      <div class="act-row"><input class="inp grow" id="lt-url" placeholder="https://…"></div>
+      <div class="act-row">
+        <span class="d">requests</span><input class="inp" id="lt-n" type="number" value="100" min="10" max="1000" style="width:80px">
+        <span class="d">concurrent</span><input class="inp" id="lt-c" type="number" value="10" min="1" max="50" style="width:70px">
+        <button class="run-btn act-btn" data-kind="loadtest" style="margin-left:auto">⏱ Run</button>
+      </div>
+    </div>
+    
+<div class="glass card act" id="action-tls">
+      <div class="act-title">🔒 TLS check — certificate &amp; DNS</div>
+      <div class="act-row">
+        <input class="inp grow" id="tls-host" placeholder="hostname, e.g. zyvor.dev">
+        <button class="run-btn act-btn" data-kind="tls">🔒 Check</button>
+      </div>
+    </div>
+    
+<div class="glass card act" id="action-probes" style="grid-column: 1 / -1">
+      <div class="act-title">🧰 Probes — ten one-shot network &amp; security checks</div>
+      <div class="act-row">
+        <input class="inp grow" id="pr-target" placeholder="https://your-app.example.com  (or a hostname for DNS)">
+      </div>
+      <div class="act-row" style="gap:8px;flex-wrap:wrap">
+        <button class="run-btn act-btn" data-kind="redirects">🔗 Redirects</button>
+        <button class="run-btn act-btn" data-kind="headers">📋 Headers</button>
+        <button class="run-btn act-btn" data-kind="cookies">🍪 Cookies</button>
+        <button class="run-btn act-btn" data-kind="robots">🤖 Robots/sitemap</button>
+        <button class="run-btn act-btn" data-kind="security_paths">🔓 Exposed paths</button>
+        <button class="run-btn act-btn" data-kind="api_check">🔌 API check</button>
+        <button class="run-btn act-btn" data-kind="sitemap_test">🗺 Sitemap URLs</button>
+        <button class="run-btn act-btn" data-kind="dns_records">🌍 DNS</button>
+        <button class="run-btn act-btn" data-kind="cors">↔ CORS</button>
+        <button class="run-btn act-btn" data-kind="transport">📦 Compression</button>
+      </div>
+    </div>
+    
+  </div>
+</section>

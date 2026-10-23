@@ -1,0 +1,61 @@
+<section id="panel-quality" class="panel">
+  <div class="panel-head">
+    <h1>Quality</h1>
+    <p>Site audits, flaky detection, Core Web Vitals, and crawl validation.</p>
+  </div>
+  <div class="acts">
+<div class="glass card act" id="action-audit" style="grid-column: 1 / -1">
+      <div class="act-title">🔬 Site audit — accessibility, links, SEO, performance, security per page</div>
+      <div class="act-row">
+        <input class="inp grow" id="au-url" placeholder="https://your-app.example.com">
+        <input class="inp" id="au-pages" type="number" value="10" min="1" max="100" style="width:80px" title="max pages">
+        <label class="chk"><input type="checkbox" id="au-insecure"> self-signed TLS</label>
+      </div>
+      <div class="act-row" id="au-checks" style="gap:12px">
+        <label class="chk"><input type="checkbox" value="a11y" checked> a11y</label>
+        <label class="chk"><input type="checkbox" value="links" checked> links</label>
+        <label class="chk"><input type="checkbox" value="seo" checked> SEO</label>
+        <label class="chk"><input type="checkbox" value="console" checked> console</label>
+        <label class="chk"><input type="checkbox" value="perf" checked> perf</label>
+        <label class="chk"><input type="checkbox" value="headers" checked> headers</label>
+        <label class="chk"><input type="checkbox" value="responsive"> responsive</label>
+        <button class="run-btn act-btn" data-kind="audit" style="margin-left:auto">🔬 Run audit</button>
+      </div>
+    </div>
+    
+<div class="glass card act" id="action-flaky">
+      <div class="act-title">🎲 Flaky check — run repeatedly, find unstable tests</div>
+      <div class="act-row">
+        <span class="d">runs</span>
+        <input class="inp" id="fl-runs" type="number" value="3" min="2" max="10" style="width:70px">
+        <button class="run-btn act-btn" data-kind="flaky" style="margin-left:auto">🎲 Detect flaky</button>
+      </div>
+    </div>
+    
+<div class="glass card act" id="action-vitals">
+      <div class="act-title">📊 Web Vitals — LCP / CLS / INP graded</div>
+      <div class="act-row"><input class="inp grow" id="cwv-url" placeholder="https://…"></div>
+      <div class="act-row" style="gap:10px">
+        <select class="inp" id="cwv-device"><option value="">desktop</option><option>iPhone 14</option><option>iPhone 15 Pro</option><option>Pixel 7</option><option>iPad Pro 11</option></select>
+        <select class="inp" id="cwv-throttle"><option value="">no throttle</option><option value="3g">3G</option><option value="offline">offline</option></select>
+        <label class="chk"><input type="checkbox" id="cwv-insecure"> self-signed TLS</label>
+        <button class="run-btn act-btn" data-kind="vitals" style="margin-left:auto">📊 Measure</button>
+      </div>
+    </div>
+    
+<div class="glass card act" id="action-crawl" style="grid-column: 1 / -1">
+      <div class="act-title">🌐 Test any site — crawl every page and validate it</div>
+      <div class="act-row">
+        <input class="inp grow" id="ct-url" placeholder="https://your-app.example.com (any UX — self-signed TLS OK)">
+        <input class="inp" id="ct-pages" type="number" value="30" min="1" max="200" style="width:90px" title="max pages">
+      </div>
+      <div class="act-row">
+        <input class="inp grow" id="ct-user" placeholder="login username (optional)" autocomplete="off">
+        <input class="inp grow" id="ct-pass" type="password" placeholder="login password (optional)" autocomplete="off">
+        <label class="chk"><input type="checkbox" id="ct-insecure"> allow self-signed TLS</label>
+        <button class="run-btn act-btn" data-kind="crawl_test">🌐 Crawl &amp; test all pages</button>
+      </div>
+    </div>
+    
+  </div>
+</section>

@@ -1,0 +1,64 @@
+<section id="panel-ask" class="panel">
+  <div class="panel-head">
+    <h1>Ask Zyra</h1>
+    <p>Zyra — citation-first Q&amp;A over your product docs. Read-only; no cluster mutations.</p>
+  </div>
+  <h2 id="ask-zyra-heading" style="display:flex;align-items:center;gap:10px">Ask Zyra
+    <span class="d" style="font-weight:400">citation-first product knowledge</span>
+    <button class="dl-btn" id="ask-new-thread" style="margin-left:auto">New thread</button>
+    <button class="dl-btn" id="ask-copy-md" title="Copy last answer as Markdown">⧉ copy MD</button>
+  </h2>
+  <div class="glass card" id="ask-panel" style="margin-bottom:14px">
+    <div class="ask-layout">
+      <div>
+        <div class="act-row" style="margin-bottom:10px">
+          <select class="inp" id="ask-product" title="Product filter">
+            <option value="">Any product</option>
+            <option value="PacketWolf">PacketWolf</option>
+            <option value="HyperSDK">HyperSDK</option>
+            <option value="GuestKit">GuestKit</option>
+            <option value="Zeus OS">Zeus OS</option>
+            <option value="Machina">Machina</option>
+            <option value="Veyron">Veyron</option>
+            <option value="Aether">Aether</option>
+            <option value="Forge">Forge</option>
+          </select>
+          <select class="inp" id="ask-doctype" title="Document type">
+            <option value="">Any document type</option>
+            <option value="user-manual">user-manual</option>
+            <option value="api-reference">api-reference</option>
+            <option value="migration-guide">migration-guide</option>
+            <option value="known-issue">known-issue</option>
+            <option value="runbook">runbook</option>
+            <option value="documentation">documentation</option>
+          </select>
+        </div>
+        <textarea class="inp grow" id="ask-question" rows="3" placeholder="Ask about PacketWolf, HyperSDK, GuestKit, migration, APIs…"></textarea>
+        <div class="act-row" style="margin-top:10px">
+          <button class="run-btn primary" id="ask-submit">Ask</button>
+          <span class="d" id="ask-status"></span>
+          <span class="d" id="ask-latency" style="margin-left:auto"></span>
+        </div>
+        <div class="ask-chips" id="ask-chips"></div>
+        <div class="ask-hint" id="ask-hint">Read-only knowledge agent — it will not mutate cluster state. Live remediation stays in a separate controlled workflow.</div>
+        <div id="remediation-panel" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--separator)">
+          <div class="k" style="margin-bottom:8px">HITL remediation (separate agent)</div>
+          <textarea class="inp grow" id="remediation-issue" rows="2" placeholder="Describe the incident to plan remediation…"></textarea>
+          <div class="act-row" style="margin-top:8px">
+            <button class="run-btn" id="remediation-submit">Plan remediation</button>
+            <button class="dl-btn" id="remediation-approve" style="display:none">Approve interrupt</button>
+            <button class="dl-btn" id="remediation-reject" style="display:none">Reject</button>
+            <span class="d" id="remediation-status"></span>
+          </div>
+          <pre id="remediation-out" style="margin-top:8px;max-height:160px;overflow:auto;font-family:var(--font-mono);font-size:0.82rem;color:var(--text-secondary);white-space:pre-wrap"></pre>
+        </div>
+      </div>
+      <div>
+        <div class="k" style="margin-bottom:8px">Thread <span class="d" id="ask-thread-label">new</span></div>
+        <div class="ask-thread" id="ask-thread"><span class="d">Ask a question to start a grounded, cited answer.</span></div>
+      </div>
+    </div>
+  </div>
+
+  
+</section>

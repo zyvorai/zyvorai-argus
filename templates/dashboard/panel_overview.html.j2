@@ -1,0 +1,78 @@
+<section id="panel-overview" class="panel is-active">
+  <div class="hero" data-status="offline" id="hero">
+    <div class="hero-shine" aria-hidden="true"></div>
+    <div class="hero-head">
+      <div class="icon-badge" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-eyebrow">ZYVOR ARGUS · MISSION CONTROL</div>
+        <h1><span id="banner-title">STANDBY</span></h1>
+        <div class="subtitle status-line"><span class="lamp"></span><span id="banner-sub">waiting for first sync</span></div>
+      </div>
+      <span class="sync" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <span id="sync">connecting…</span>
+        <span id="session" style="display:none">🔐 <b id="session-user"></b> · <a class="rlink" href="#" id="logout">sign out</a></span>
+      </span>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-tile"{% if desktop_mode %} style="display:none"{% endif %}><span class="stat-label">Pods</span><span class="stat-value" id="stat-pods">—</span><span class="stat-sub" id="stat-pods-sub"></span></div>
+      <div class="stat-tile"{% if desktop_mode %} style="display:none"{% endif %}><span class="stat-label">Replicas</span><span class="stat-value" id="stat-replicas">—</span><span class="stat-sub" id="stat-replicas-sub"></span></div>
+      <div class="stat-tile"><span class="stat-label">Last QA run</span><span class="stat-value" id="stat-run">—</span><span class="stat-sub" id="stat-run-sub"></span></div>
+      <div class="stat-tile"><span class="stat-label">Pass rate</span><span class="stat-value" id="stat-rate">—</span><span class="stat-sub" id="stat-rate-sub">last 30 runs</span></div>
+      <div class="stat-tile"><span class="stat-label">Next smoke run</span><span class="stat-value" id="stat-cron">—</span><span class="stat-sub" id="stat-cron-sub"></span></div>
+      <div class="stat-tile"><span class="stat-label">Knowledge</span><span class="stat-value" id="stat-knowledge">—</span><span class="stat-sub" id="stat-knowledge-sub">Ask Zyra</span></div>
+    </div>
+  </div>
+
+  
+  {# The desktop app wraps a local, cluster-less argus serve — this whole
+     section is always "cluster unavailable" there, so it's just clutter.
+     CSS-hidden rather than removed from the DOM: the polling JS below still
+     targets these ids by getElementById() and isn't cluster-aware, so
+     omitting the elements outright would throw on every refresh cycle. #}
+  <div{% if desktop_mode %} style="display:none"{% endif %}>
+  <h2>Workloads</h2>
+  <div class="strip" id="workloads"><div class="empty">No workload data yet.</div></div>
+
+  <h2 style="display:flex;align-items:center">Pods <span style="color:var(--text-muted);font-weight:400;margin-left:6px" id="ns"></span>
+    <input class="inp pod-search" id="pod-search" placeholder="filter pods…">
+    <button class="dl-btn" id="events-toggle" style="margin-left:8px">⚡ events</button>
+  </h2>
+  <div class="glass card" id="events-panel" style="display:none;margin-bottom:14px">
+    <div class="k" style="margin-bottom:8px">Recent cluster events</div>
+    <div style="overflow-x:auto"><table class="runs-table" id="events-table"><tbody></tbody></table></div>
+  </div>
+  <div class="pods" id="pods"><div class="empty">No pod data yet.</div></div>
+  </div>
+
+  
+  <h2 style="display:flex;align-items:center;gap:12px">Live job <span id="run-status" class="run-status"></span></h2>
+  <div id="job-live" class="terminal-window" style="display:none;margin-bottom:14px">
+    <div class="terminal-chrome">
+      <div class="terminal-lights" aria-hidden="true">
+        <span class="tl-red"></span>
+        <span class="tl-yellow"></span>
+        <span class="tl-green"></span>
+      </div>
+      <div class="terminal-title">
+        <span class="spin" aria-hidden="true"></span>
+        <span id="live-kind">job</span>
+        <span class="d" id="live-elapsed"></span>
+        <span id="live-tally"></span>
+      </div>
+      <div class="terminal-actions">
+        <button type="button" class="term-btn" id="btn-copylog">Copy</button>
+        <button type="button" class="term-btn" id="btn-dllog">Save</button>
+        <button type="button" class="term-btn danger" id="btn-stop">Stop</button>
+      </div>
+    </div>
+    <div class="terminal-body">
+      <div id="live-cases"></div>
+      <pre id="live-log"></pre>
+    </div>
+  </div>
+  <div class="glass card" id="job-result" style="display:none;margin-top:14px"></div>
+</section>

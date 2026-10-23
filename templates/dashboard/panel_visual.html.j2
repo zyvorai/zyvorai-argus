@@ -1,0 +1,57 @@
+<section id="panel-visual" class="panel">
+  <div class="panel-head">
+    <h1>Visual</h1>
+    <p>Regression, screenshots, route sweeps, and URL comparisons.</p>
+  </div>
+  <div class="acts">
+<div class="glass card act" id="action-regression">
+      <div class="act-title">👁 Visual regression</div>
+      <div class="d" style="margin-bottom:8px">Pixel-compare screenshots against baselines.</div>
+      <div class="act-row">
+        <label class="chk"><input type="checkbox" id="reg-update"> update baselines</label>
+        <button class="run-btn act-btn" data-kind="regression">👁 Regression</button>
+      </div>
+    </div>
+    
+<div class="glass card act" id="action-compare">
+      <div class="act-title">🔀 Compare — visual diff two URLs (staging vs prod)</div>
+      <div class="act-row"><input class="inp grow" id="cmp-a" placeholder="URL A (e.g. staging)"></div>
+      <div class="act-row"><input class="inp grow" id="cmp-b" placeholder="URL B (e.g. prod)"></div>
+      <div class="act-row">
+        <label class="chk"><input type="checkbox" id="cmp-insecure"> self-signed TLS</label>
+        <button class="run-btn act-btn" data-kind="compare" style="margin-left:auto">🔀 Compare</button>
+      </div>
+    </div>
+    
+<div class="glass card act" id="action-screenshot">
+      <div class="act-title">📸 Screenshot — capture any URL</div>
+      <div class="act-row">
+        <input class="inp grow" id="sh-url" placeholder="https://…">
+      </div>
+      <div class="act-row" id="sh-vps" style="gap:10px">
+        <label class="chk"><input type="checkbox" value="desktop" checked> desktop</label>
+        <label class="chk"><input type="checkbox" value="tablet"> tablet</label>
+        <label class="chk"><input type="checkbox" value="mobile"> mobile</label>
+        <label class="chk"><input type="checkbox" id="sh-full"> full page</label>
+        <button class="run-btn act-btn" data-kind="screenshot" style="margin-left:auto">📸 Capture</button>
+      </div>
+    </div>
+    
+<div class="glass card act" id="action-route-sweep" style="grid-column: 1 / -1">
+      <div class="act-title">🗺 Route sweep — screenshot many routes, diff vs baselines</div>
+      <div class="act-row">
+        <input class="inp grow" id="rs-url" placeholder="https://…">
+        <input class="inp grow" id="rs-routes" placeholder="routes: / , /products , /vm  (comma or newline — or tick auto-discover)">
+      </div>
+      <div class="act-row" style="gap:12px" id="rs-vps">
+        <label class="chk"><input type="checkbox" value="desktop" checked> desktop</label>
+        <label class="chk"><input type="checkbox" value="mobile"> mobile</label>
+        <label class="chk"><input type="checkbox" id="rs-auto"> auto-discover (crawl)</label>
+        <label class="chk"><input type="checkbox" id="rs-update"> update baselines</label>
+        <label class="chk"><input type="checkbox" id="rs-insecure"> self-signed TLS</label>
+        <button class="run-btn act-btn" data-kind="route_sweep" style="margin-left:auto">🗺 Sweep</button>
+      </div>
+    </div>
+    
+  </div>
+</section>
