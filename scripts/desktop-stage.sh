@@ -29,4 +29,5 @@ tar -xzf "$DL/$TARBALL" -C "$DL"
 cp "$DL/node-$NODE_VERSION-darwin-$ARCH/bin/node" "$STAGE/node/bin/node"
 rm -rf "$DL"
 
+chmod -R u+w "$STAGE"
 echo "staged: $(du -sh "$STAGE" | cut -d$'\t' -f1)"
