@@ -107,6 +107,9 @@ jobs:
           # tool (tsc --noEmit), never executed at runtime, and its Go stdlib is
           # upstream-pinned.
           skip-files: '**/@typescript/typescript-*/lib/tsc'
+          # trivy's secret scanner flags example strings inside the anthropic SDK's own
+          # source (agents.py, *_params.py); package metadata is still vuln-scanned.
+          skip-dirs: '/opt/venv/lib/python3.11/site-packages/anthropic'
           exit-code: '1'
 
   secret-scan:
