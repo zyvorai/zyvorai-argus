@@ -18,12 +18,12 @@
       </span>
     </div>
     <div class="stat-grid">
-      <div class="stat-tile"{% if desktop_mode %} style="display:none"{% endif %}><span class="stat-label">Pods</span><span class="stat-value" id="stat-pods">—</span><span class="stat-sub" id="stat-pods-sub"></span></div>
-      <div class="stat-tile"{% if desktop_mode %} style="display:none"{% endif %}><span class="stat-label">Replicas</span><span class="stat-value" id="stat-replicas">—</span><span class="stat-sub" id="stat-replicas-sub"></span></div>
-      <div class="stat-tile"><span class="stat-label">Last QA run</span><span class="stat-value" id="stat-run">—</span><span class="stat-sub" id="stat-run-sub"></span></div>
-      <div class="stat-tile"><span class="stat-label">Pass rate</span><span class="stat-value" id="stat-rate">—</span><span class="stat-sub" id="stat-rate-sub">last 30 runs</span></div>
-      <div class="stat-tile"><span class="stat-label">Next smoke run</span><span class="stat-value" id="stat-cron">—</span><span class="stat-sub" id="stat-cron-sub"></span></div>
-      <div class="stat-tile"><span class="stat-label">Knowledge</span><span class="stat-value" id="stat-knowledge">—</span><span class="stat-sub" id="stat-knowledge-sub">Ask Zyra</span></div>
+      <div class="stat-tile" data-metric="pods"{% if desktop_mode %} style="display:none"{% endif %}><span class="stat-label">Pods</span><span class="stat-value" id="stat-pods">—</span><span class="stat-sub" id="stat-pods-sub"></span></div>
+      <div class="stat-tile" data-metric="replicas"{% if desktop_mode %} style="display:none"{% endif %}><span class="stat-label">Replicas</span><span class="stat-value" id="stat-replicas">—</span><span class="stat-sub" id="stat-replicas-sub"></span></div>
+      <div class="stat-tile" data-metric="run"><span class="stat-label">Last QA run</span><span class="stat-value" id="stat-run">—</span><span class="stat-sub" id="stat-run-sub"></span></div>
+      <div class="stat-tile" data-metric="rate"><span class="stat-label">Pass rate</span><span class="stat-value" id="stat-rate">—</span><span class="stat-sub" id="stat-rate-sub">last 30 runs</span></div>
+      <div class="stat-tile" data-metric="cron"><span class="stat-label">Next smoke run</span><span class="stat-value" id="stat-cron">—</span><span class="stat-sub" id="stat-cron-sub"></span></div>
+      <div class="stat-tile" data-metric="knowledge"><span class="stat-label">Knowledge</span><span class="stat-value" id="stat-knowledge">—</span><span class="stat-sub" id="stat-knowledge-sub">Ask Zyra</span></div>
     </div>
   </div>
 
