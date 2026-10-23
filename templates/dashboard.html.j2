@@ -1641,6 +1641,17 @@
   </div>
 
   
+  <h2>Compare runs</h2>
+  <div class="glass card" id="cmp-card" style="margin-bottom:14px">
+    <div class="act-row" style="margin-bottom:10px">
+      <label class="d" for="cmp-a">Baseline</label>
+      <select class="inp" id="cmp-a" aria-label="Baseline run"></select>
+      <label class="d" for="cmp-b">Candidate</label>
+      <select class="inp" id="cmp-b" aria-label="Candidate run"></select>
+    </div>
+    <div id="cmp-out" aria-live="polite"><span class="d">Run at least two QA runs to compare them.</span></div>
+  </div>
+
   <h2 style="display:flex;align-items:center;gap:10px">Test health <button class="dl-btn" id="th-refresh">↻</button></h2>
   <div class="glass card">
     <div class="feed" id="test-health" style="max-height:280px"><span class="d">No test history yet — run tests to build trends.</span></div>
@@ -2570,6 +2581,40 @@ function renderRuns(runs) {
     });
   }
   renderSpark(runs);
+  renderCompare(runs);
+}
+
+/* run comparison: baseline vs candidate deltas */
+function cmpDelta(a, b, unit, lowerIsBetter) {
+  if (a == null || b == null) return '<span class="d">—</span>';
+  const d = Math.round((b - a) * 100) / 100;
+  if (d === 0) return '<span class="d">no change</span>';
+  const good = lowerIsBetter ? d < 0 : d > 0;
+  return '<b style="color:var(' + (good ? "--status-ok" : "--status-error") + ')">' + (d > 0 ? "+" : "") + d + unit + '</b>';
+}
+function renderCompare(runs) {
+  const a = $("cmp-a"), b = $("cmp-b"), out = $("cmp-out");
+  if (!a || !b) return;
+  if (runs.length < 2) { out.innerHTML = '<span class="d">Run at least two QA runs to compare them.</span>'; return; }
+  const opts = runs.slice(0, 30).map((r, i) => '<option value="' + i + '">' + esc((r.timestamp || "").replace("T", " ").slice(0, 16)) + ' · ' + r.passed + '/' + r.total + ' · ' + esc(r.source) + '</option>').join("");
+  const keepA = a.value, keepB = b.value;
+  a.innerHTML = opts; b.innerHTML = opts;
+  a.value = keepA && a.querySelector('option[value="' + keepA + '"]') ? keepA : "1";
+  b.value = keepB && b.querySelector('option[value="' + keepB + '"]') ? keepB : "0";
+  const draw = () => {
+    const ra = runs[+a.value], rb = runs[+b.value];
+    const rate = (r) => r.total ? Math.round(1000 * r.passed / r.total) / 10 : null;
+    const row = (k, x, y, delta) => '<tr><td>' + k + '</td><td>' + x + '</td><td>' + y + '</td><td>' + delta + '</td></tr>';
+    const dur = (r) => r.duration_s != null ? Math.round(r.duration_s * 10) / 10 : null;
+    out.innerHTML = '<table class="runs-table" aria-label="Run comparison"><thead><tr><th scope="col" class="d">Metric</th><th scope="col" class="d">Baseline</th><th scope="col" class="d">Candidate</th><th scope="col" class="d">Change</th></tr></thead><tbody>'
+      + row("Pass rate", rate(ra) ?? "—", rate(rb) ?? "—", cmpDelta(rate(ra), rate(rb), " pts", false))
+      + row("Failed", ra.failed, rb.failed, cmpDelta(ra.failed, rb.failed, "", true))
+      + row("Total tests", ra.total, rb.total, cmpDelta(ra.total, rb.total, "", false))
+      + row("Duration (s)", dur(ra) ?? "—", dur(rb) ?? "—", cmpDelta(dur(ra), dur(rb), "s", true))
+      + row("V8 coverage %", ra.v8_coverage_percentage ?? "—", rb.v8_coverage_percentage ?? "—", cmpDelta(ra.v8_coverage_percentage, rb.v8_coverage_percentage, " pts", false))
+      + '</tbody></table>';
+  };
+  a.onchange = draw; b.onchange = draw; draw();
 }
 
 /* single-series pass-rate sparkline with hover tooltip (accent blue) */
