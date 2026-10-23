@@ -142,7 +142,34 @@ fn spawn_serve(bin_override: Option<&str>, resource_dir: Option<std::path::PathB
         });
     }
 
+    if bundled {
+        install_browsers_if_missing(&working_dir, resource_dir.as_deref());
+    }
     Ok((child, port))
+}
+
+/// Chromium is not shipped (hundreds of MB); fetch it once, in the
+/// background, into the app-data browsers dir. Jobs that need a browser
+/// work as soon as it lands; the dashboard itself does not wait for it.
+fn install_browsers_if_missing(workspace: &std::path::Path, resource_dir: Option<&std::path::Path>) {
+    let dir = paths::browsers_dir();
+    let has_chromium = std::fs::read_dir(&dir)
+        .map(|d| d.flatten().any(|e| e.file_name().to_string_lossy().starts_with("chromium")))
+        .unwrap_or(false);
+    let cli = workspace.join("node_modules/playwright/cli.js");
+    let node = resource_dir.map(|r| r.join("node/bin/node"));
+    if has_chromium || !cli.is_file() {
+        return;
+    }
+    let Some(node) = node.filter(|n| n.is_file()) else { return };
+    let _ = std::fs::create_dir_all(&dir);
+    let _ = Command::new(node)
+        .args([cli.to_string_lossy().as_ref(), "install", "chromium"])
+        .env("PLAYWRIGHT_BROWSERS_PATH", &dir)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
 }
 
 /// Start the server on a background thread; `status()` reports progress.

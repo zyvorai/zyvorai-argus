@@ -16,8 +16,17 @@ rm -rf "$STAGE" && mkdir -p "$STAGE"
 npm ci --omit=dev --ignore-scripts --workspaces=false
 cp -R node_modules "$STAGE/argus/_internal/node_modules"
 
-# Node runtime: copy the one on PATH (arch matches the build host).
+# Node runtime: official self-contained build (Homebrew's node links libnode.dylib).
+NODE_VERSION="${NODE_VERSION:-v22.22.0}"
+ARCH="$(uname -m | sed 's/x86_64/x64/')"
+TARBALL="node-$NODE_VERSION-darwin-$ARCH.tar.gz"
+DL="$(mktemp -d)"
+curl -fsSL "https://nodejs.org/dist/$NODE_VERSION/$TARBALL" -o "$DL/$TARBALL"
+curl -fsSL "https://nodejs.org/dist/$NODE_VERSION/SHASUMS256.txt" -o "$DL/SHASUMS256.txt"
+(cd "$DL" && grep " $TARBALL\$" SHASUMS256.txt | shasum -a 256 -c -)
 mkdir -p "$STAGE/node/bin"
-cp "$(command -v node)" "$STAGE/node/bin/node"
+tar -xzf "$DL/$TARBALL" -C "$DL"
+cp "$DL/node-$NODE_VERSION-darwin-$ARCH/bin/node" "$STAGE/node/bin/node"
+rm -rf "$DL"
 
 echo "staged: $(du -sh "$STAGE" | cut -d$'\t' -f1)"
