@@ -16,7 +16,7 @@ rm -rf "$STAGE" && mkdir -p "$STAGE"
 # so don't --omit=dev); drop the build-only packages afterwards.
 npm ci --ignore-scripts --workspaces=false
 cp -R node_modules "$STAGE/argus/_internal/node_modules"
-rm -rf "$STAGE/argus/_internal/node_modules"/{typescript,@types,@tauri-apps}
+rm -rf "$STAGE/argus/_internal/node_modules"/{typescript,@types,@tauri-apps,.bin}
 
 # Node runtime: official self-contained build (Homebrew's node links libnode.dylib).
 NODE_VERSION="${NODE_VERSION:-v22.22.0}"
