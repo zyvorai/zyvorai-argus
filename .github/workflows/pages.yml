@@ -32,7 +32,7 @@ jobs:
           for page in root.glob("*.html"):
               txt = page.read_text()
               for ref in re.findall(r'(?:href|src|poster)="([^"#?]+)', txt):
-                  if re.match(r"^(https?:|mailto:)", ref):
+                  if re.match(r"^(https?:|mailto:|data:)", ref):
                       continue
                   if not (root / ref).exists():
                       bad.append(f"{page.name}: {ref}")
