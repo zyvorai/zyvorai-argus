@@ -27,7 +27,8 @@ from typing import Any
 
 def _issue_to_markdown(issue: dict[str, Any]) -> str:
     key = str(issue.get("key") or issue.get("id") or "TICKET")
-    fields = issue.get("fields") if isinstance(issue.get("fields"), dict) else issue
+    raw_fields = issue.get("fields")
+    fields: dict[str, Any] = raw_fields if isinstance(raw_fields, dict) else issue
     summary = str(fields.get("summary") or fields.get("title") or key)
     description = fields.get("description") or fields.get("body") or ""
     if isinstance(description, dict):

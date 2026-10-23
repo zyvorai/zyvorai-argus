@@ -36,8 +36,10 @@ def build_studio(job: dict[str, Any], *, repo: Path | None = None) -> dict[str, 
     from orchestrator.paths import repo_root
 
     root = repo if repo is not None else repo_root()
-    result = job.get("result") if isinstance(job.get("result"), dict) else {}
-    cases = result.get("cases") if isinstance(result.get("cases"), list) else []
+    raw_result = job.get("result")
+    result: dict[str, Any] = raw_result if isinstance(raw_result, dict) else {}
+    raw_cases = result.get("cases")
+    cases: list[Any] = raw_cases if isinstance(raw_cases, list) else []
     rows: list[dict[str, Any]] = []
     for raw in cases:
         if not isinstance(raw, dict):

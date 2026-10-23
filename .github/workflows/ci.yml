@@ -24,7 +24,7 @@ jobs:
           node-version: '20'
 
       - name: Install Python dependencies
-        run: pip install -e ".[dev,knowledge]"
+        run: pip install -e ".[dev,knowledge,otel]"
 
       - name: Ruff lint
         run: ruff check .

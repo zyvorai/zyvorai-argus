@@ -44,7 +44,7 @@ def get_embeddings() -> Any:
                 return [list(v) for v in self._model.embed(texts)]
 
             def embed_query(self, text: str) -> list[float]:
-                return next(iter(self._model.query_embed(text)))
+                return [list(v) for v in self._model.query_embed(text)][0]
 
         return _FastEmbedDense(name)
 

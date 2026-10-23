@@ -160,9 +160,9 @@ def fetch_requirements(state: PipelineState) -> PipelineState:
 
         keys = list(state.get("jira_issue_keys") or metadata.get("jira_issue_keys") or [])
         exports = list(state.get("document_paths") or [])
-        for p in state.get("spec_paths") or []:
-            if str(p).lower().endswith(".json"):
-                exports.append(str(p))
+        for spec_path in state.get("spec_paths") or []:
+            if str(spec_path).lower().endswith(".json"):
+                exports.append(str(spec_path))
         if not keys and not exports:
             return {
                 **state,
