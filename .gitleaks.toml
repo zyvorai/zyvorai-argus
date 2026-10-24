@@ -1,0 +1,10 @@
+# Extend the default ruleset; only silence the reviewed false positives below.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documentation placeholders and fetched third-party fixtures (reviewed: ADMIN_TOKEN / change-me, marketing copy)"
+paths = [
+  '''^tests/fixtures/fetched/''',
+  '''^docs/tutorials/''',
+]
