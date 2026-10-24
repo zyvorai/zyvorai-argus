@@ -168,10 +168,20 @@ def test_no_element_id_is_used_twice_across_panels():
     returned the wrong panel's field (the auth test read the site-audit URL, and 'Compare runs'
     wrote its options into a text box)."""
     import collections
+    from html.parser import HTMLParser
 
-    html = _dashboard()
-    static = re.sub(r"<script>.*?</script>", "", html, flags=re.S)
-    counts = collections.Counter(re.findall(r'\bid="([^"]+)"', static))
+    class _Ids(HTMLParser):
+        # A real parser: markup inside <script> strings is script text, not elements.
+        def __init__(self):
+            super().__init__()
+            self.ids: list[str] = []
+
+        def handle_starttag(self, tag, attrs):
+            self.ids.extend(value for name, value in attrs if name == "id" and value)
+
+    parser = _Ids()
+    parser.feed(_dashboard())
+    counts = collections.Counter(parser.ids)
     assert [i for i, c in counts.items() if c > 1] == []
 
 
