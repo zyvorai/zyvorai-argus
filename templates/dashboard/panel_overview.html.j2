@@ -12,18 +12,18 @@
         <h1><span id="banner-title">STANDBY</span></h1>
         <div class="subtitle status-line"><span class="lamp"></span><span id="banner-sub">waiting for first sync</span></div>
       </div>
-      <span class="sync" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <span class="sync sync-col">
         <span id="sync">connecting…</span>
         <span id="session" style="display:none">🔐 <b id="session-user"></b> · <a class="rlink" href="#" id="logout">sign out</a></span>
       </span>
     </div>
     <div class="stat-grid">
-      <div class="stat-tile" data-metric="pods"{% if desktop_mode %} style="display:none"{% endif %}><span class="stat-label">Pods</span><span class="stat-value" id="stat-pods">—</span><span class="stat-sub" id="stat-pods-sub"></span></div>
-      <div class="stat-tile" data-metric="replicas"{% if desktop_mode %} style="display:none"{% endif %}><span class="stat-label">Replicas</span><span class="stat-value" id="stat-replicas">—</span><span class="stat-sub" id="stat-replicas-sub"></span></div>
-      <div class="stat-tile" data-metric="run"><span class="stat-label">Last QA run</span><span class="stat-value" id="stat-run">—</span><span class="stat-sub" id="stat-run-sub"></span></div>
-      <div class="stat-tile" data-metric="rate"><span class="stat-label">Pass rate</span><span class="stat-value" id="stat-rate">—</span><span class="stat-sub" id="stat-rate-sub">last 30 runs</span></div>
-      <div class="stat-tile" data-metric="cron"><span class="stat-label">Next smoke run</span><span class="stat-value" id="stat-cron">—</span><span class="stat-sub" id="stat-cron-sub"></span></div>
-      <div class="stat-tile" data-metric="knowledge"><span class="stat-label">Knowledge</span><span class="stat-value" id="stat-knowledge">—</span><span class="stat-sub" id="stat-knowledge-sub">Ask Zyra</span></div>
+      <div class="stat-tile" data-metric="pods"{% if desktop_mode %} style="display:none"{% endif %}><span class="kpi-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.8 13.5 5v6L8 14.2 2.5 11V5L8 1.8z"/><path d="M8 8v6M2.7 5.1 8 8l5.3-2.9"/></svg></span><span class="stat-label">Pods</span><span class="stat-value" id="stat-pods">—</span><span class="stat-sub" id="stat-pods-sub"></span></div>
+      <div class="stat-tile" data-metric="replicas"{% if desktop_mode %} style="display:none"{% endif %}><span class="kpi-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="1.6"/><path d="M6 12.2h5.4a1.6 1.6 0 0 0 1.6-1.6V5.2"/></svg></span><span class="stat-label">Replicas</span><span class="stat-value" id="stat-replicas">—</span><span class="stat-sub" id="stat-replicas-sub"></span></div>
+      <div class="stat-tile" data-metric="run"><span class="kpi-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="5.8"/><path d="M8 4.8V8l2.2 1.4"/></svg></span><span class="stat-label">Last QA run</span><span class="stat-value" id="stat-run">—</span><span class="stat-sub" id="stat-run-sub"></span></div>
+      <div class="stat-tile" data-metric="rate"><span class="kpi-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5 6 8l2.5 2.5L14 4.5"/><path d="M10.2 4.5H14v3.8"/></svg></span><span class="stat-label">Pass rate</span><span class="stat-value" id="stat-rate">—</span><span class="stat-sub" id="stat-rate-sub">last 30 runs</span></div>
+      <div class="stat-tile" data-metric="cron"><span class="kpi-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.2" y="3.2" width="11.6" height="10.6" rx="2"/><path d="M2.2 6.6h11.6M5.4 1.8v2.6M10.6 1.8v2.6"/></svg></span><span class="stat-label">Next smoke run</span><span class="stat-value" id="stat-cron">—</span><span class="stat-sub" id="stat-cron-sub"></span></div>
+      <div class="stat-tile" data-metric="knowledge"><span class="kpi-ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3.5h10v7H6.4L3.8 13V3.5z"/><path d="M5.6 6.4h4.8M5.6 8.6h3"/></svg></span><span class="stat-label">Knowledge</span><span class="stat-value" id="stat-knowledge">—</span><span class="stat-sub" id="stat-knowledge-sub">Ask Zyra</span></div>
     </div>
   </div>
 
@@ -37,20 +37,24 @@
   <h2>Workloads</h2>
   <div class="strip" id="workloads"><div class="empty">No workload data yet.</div></div>
 
-  <h2 style="display:flex;align-items:center">Pods <span style="color:var(--text-muted);font-weight:400;margin-left:6px" id="ns"></span>
-    <input class="inp pod-search" id="pod-search" placeholder="filter pods…">
-    <button class="dl-btn" id="events-toggle" style="margin-left:8px">⚡ events</button>
-  </h2>
-  <div class="glass card" id="events-panel" style="display:none;margin-bottom:14px">
-    <div class="k" style="margin-bottom:8px">Recent cluster events</div>
-    <div style="overflow-x:auto"><table class="runs-table" id="events-table"><tbody></tbody></table></div>
+  <div class="section-head">
+    <h2>Pods <span class="muted-ns" id="ns"></span></h2>
+    <span class="section-actions">
+      <label class="sr-only" for="pod-search">Filter pods</label>
+      <input class="inp pod-search" id="pod-search" type="search" placeholder="Filter pods…">
+      <button class="dl-btn" id="events-toggle">⚡ Events</button>
+    </span>
+  </div>
+  <div class="glass card mb-14" id="events-panel" style="display:none">
+    <div class="k mb-8">Recent cluster events</div>
+    <div class="scroll-x"><table class="runs-table" id="events-table"><tbody></tbody></table></div>
   </div>
   <div class="pods" id="pods"><div class="empty">No pod data yet.</div></div>
   </div>
 
   
-  <h2 style="display:flex;align-items:center;gap:12px">Live job <span id="run-status" class="run-status"></span></h2>
-  <div id="job-live" class="terminal-window" style="display:none;margin-bottom:14px">
+  <h2>Live job <span id="run-status" class="run-status"></span></h2>
+  <div id="job-live" class="terminal-window mb-14" style="display:none">
     <div class="terminal-chrome">
       <div class="terminal-lights" aria-hidden="true">
         <span class="tl-red"></span>
@@ -74,6 +78,6 @@
       <pre id="live-log"></pre>
     </div>
   </div>
-  <div class="glass card" id="side-jobs" style="display:none;margin-bottom:14px" aria-live="polite"></div>
-  <div class="glass card" id="job-result" style="display:none;margin-top:14px"></div>
+  <div class="glass card mb-14" id="side-jobs" style="display:none" aria-live="polite"></div>
+  <div class="glass card mt-14" id="job-result" style="display:none"></div>
 </section>

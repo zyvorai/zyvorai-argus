@@ -100,6 +100,7 @@
 <header class="global-header">
   <button type="button" class="menu-btn" id="menu-btn" aria-label="Open navigation">☰</button>
   <span class="header-mark" aria-hidden="true">{{ argus_icon("hdr", 26) }}</span>
+  <div class="header-title"><b id="page-title">Overview</b><span id="page-sub">Cluster health and QA runs</span></div>
   <div class="global-header-spacer"></div>
   <span class="knowledge-lamp" id="knowledge-lamp" data-status="offline" title="Knowledge agent status">
     <span class="kl-dot" aria-hidden="true"></span>
@@ -107,11 +108,16 @@
   </span>
   <label class="sr-only" for="target-switch">Active target</label>
   <select class="inp target-switch" id="target-switch" title="Active target: fills the URL fields in every panel"></select>
-  <button type="button" class="theme-btn" id="theme-toggle" aria-label="Switch to light theme" title="Switch to light theme">
-    <svg class="icon-moon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 1.5a6 6 0 1 0 6 6 4.5 4.5 0 0 1-6-6z"/></svg>
-    <svg class="icon-sun" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.05 3.05l1.06 1.06M11.9 11.9l1.06 1.06M3.05 12.95l1.06-1.06M11.9 4.1l1.06-1.06"/></svg>
+  <button type="button" class="search-btn" id="topbar-palette" aria-label="Search commands" title="Search commands (Ctrl K)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+    <span>Search</span><kbd class="sk" aria-hidden="true">Ctrl K</kbd>
   </button>
-  <button type="button" class="run-btn primary" id="topbar-palette">Search</button>
+  <span class="capsule-group">
+    <button type="button" class="theme-btn" id="theme-toggle" aria-label="Switch to light theme" title="Switch to light theme">
+      <svg class="icon-moon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 1.5a6 6 0 1 0 6 6 4.5 4.5 0 0 1-6-6z"/></svg>
+      <svg class="icon-sun" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.05 3.05l1.06 1.06M11.9 11.9l1.06 1.06M3.05 12.95l1.06-1.06M11.9 4.1l1.06-1.06"/></svg>
+    </button>
+  </span>
 </header>
 <dialog id="target-dialog" class="target-dialog" aria-labelledby="target-title">
   <form id="target-form" method="dialog">
@@ -152,11 +158,11 @@
 <datalist id="spec-list"></datalist>
 </div>
 <footer class="status-bar">
-    <span><kbd>r</kbd> refresh</span>
-    <span><kbd>esc</kbd> close</span>
-    <span><button class="dl-btn" id="sound-toggle" style="padding:1px 8px"></button></span>
-    <span>auto-refresh
-      <select class="inp" id="refresh-rate" aria-label="Auto-refresh interval" style="padding:4px 8px;font-size:0.85rem">
+    <span class="sb-item"><kbd>r</kbd> refresh</span>
+    <span class="sb-item"><kbd>esc</kbd> close</span>
+    <span class="sb-item"><button class="dl-btn" id="sound-toggle"></button></span>
+    <span class="sb-item">auto-refresh
+      <select class="inp" id="refresh-rate" aria-label="Auto-refresh interval">
         <option value="5000">5s</option>
         <option value="15000">15s</option>
         <option value="60000">60s</option>

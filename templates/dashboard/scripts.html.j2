@@ -77,9 +77,24 @@ const PANEL_FOR_KIND = {
   exploit_poc: "security", attack_chain: "security", host_pentest: "security", cloud_pentest: "security",
   db_assert: "security", chaos_inject: "security", chaos_webhook: "security",
 };
+const PANEL_SUB = {
+  overview: "Cluster health and QA runs", ask: "Ask about your tests, runs and requirements",
+  pipeline: "Run the full spec-to-report pipeline", visual: "Screenshots and visual diffs",
+  quality: "Accessibility, performance and SEO", journeys: "Multi-step user flows",
+  api: "API contracts and checks", probes: "Quick security and infrastructure probes",
+  requirements: "Requirements quality and traceability", security: "Authorized security testing",
+  operations: "Runs, schedules and history",
+};
+function setPageTitle(id) {
+  const link = document.querySelector('.side-rail [data-panel="' + id + '"] .rail-link-label');
+  const title = $("page-title"), sub = $("page-sub");
+  if (title && link) title.textContent = link.textContent.trim();
+  if (sub) sub.textContent = PANEL_SUB[id] || "";
+}
 function showPanel(id, opts) {
   opts = opts || {};
   if (!PANELS.includes(id)) id = "overview";
+  setPageTitle(id);
   PANELS.forEach(function (p) {
     var el = $("panel-" + p);
     if (el) el.classList.toggle("is-active", p === id);

@@ -1,0 +1,138 @@
+/* Design tokens: Liquid Glass (after zyvor-vytrix). Dark is the default;
+   [data-theme="light"] overrides it. Used by the dashboard and the login page. */
+:root {
+  color-scheme: dark;
+
+  /* type */
+  --font-base: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, monospace;
+
+  /* text */
+  --text: #f5f5f7;
+  --text-secondary: rgba(235, 235, 245, 0.72);
+  --text-muted: rgba(235, 235, 245, 0.58);
+  --on-accent: #fff;
+  --accent-fill: #0a6cf0; /* white text on this passes 4.5:1 in both themes */
+
+  /* accent + status (colour is data: the accent only marks intent) */
+  --accent: #2997ff;
+  --accent-hover: #4aa9ff;
+  --accent-soft: rgba(41, 151, 255, 0.16);
+  --accent-border-soft: rgba(41, 151, 255, 0.42);
+  --accent-bg-soft: rgba(41, 151, 255, 0.11);
+  --status-ok: #30d158;
+  --status-warn: #ff9f0a;
+  --status-error: #ff453a;
+  --status-info: #2997ff;
+  --status-neutral: #8e8e93;
+  --ok-soft: rgba(48, 209, 88, 0.16);
+  --warn-soft: rgba(255, 159, 10, 0.16);
+  --error-soft: rgba(255, 69, 58, 0.16);
+
+  /* surfaces */
+  --bg: #0c0d12;
+  --surface: rgba(44, 44, 50, 0.62);
+  --surface-solid: #26262b;
+  --rail-bg: rgba(40, 40, 46, 0.55);
+  --header-bg: rgba(20, 20, 26, 0.55);
+  --card-hover: rgba(58, 58, 66, 0.68);
+  --fill: rgba(120, 120, 128, 0.22);
+  --fill-strong: rgba(120, 120, 128, 0.34);
+  --border: rgba(255, 255, 255, 0.1);
+  --hover-bg: rgba(255, 255, 255, 0.07);
+  --btn-hover-bg: rgba(255, 255, 255, 0.12);
+  --code-bg: rgba(120, 120, 128, 0.28);
+  --icon-badge-bg: rgba(120, 120, 128, 0.2);
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+  --palette-overlay: rgba(0, 0, 0, 0.55);
+
+  /* glass material */
+  --glass-blur: blur(34px) saturate(180%);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --shadow-sm: 0 0 0 0.5px rgba(255, 255, 255, 0.06), 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -10px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 0 0 0.5px rgba(255, 255, 255, 0.1), 0 14px 40px -8px rgba(0, 0, 0, 0.6);
+  --focus-ring: rgba(41, 151, 255, 0.45);
+  --wallpaper:
+    radial-gradient(55% 60% at 8% 4%, rgba(60, 90, 220, 0.34) 0%, transparent 62%),
+    radial-gradient(50% 55% at 94% 6%, rgba(150, 70, 200, 0.26) 0%, transparent 64%),
+    radial-gradient(60% 60% at 82% 98%, rgba(30, 170, 190, 0.2) 0%, transparent 62%),
+    radial-gradient(45% 55% at 4% 96%, rgba(60, 60, 170, 0.22) 0%, transparent 62%);
+
+  /* concentric radii: panel 18 > control 12 > small 8 */
+  --radius: 12px;
+  --r-panel: 18px;
+  --r-control: 12px;
+  --r-small: 8px;
+  --rail-width: 244px;
+  --rail-width-collapsed: 68px;
+  --rail-inset: 12px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* colour-is-data: one fixed colour per metric */
+  --m-pods: #2997ff;
+  --m-replicas: #a550e0;
+  --m-run: #ff9f0a;
+  --m-rate: #30d158;
+  --m-cron: #ff5c8a;
+  --m-knowledge: #40c8e0;
+
+  /* legacy aliases (JS builds inline styles with these; keep until cleaned up) */
+  --separator: var(--border);
+  --text-primary: var(--text);
+  --surface-base: var(--surface);
+  --surface-elevated: var(--card-hover);
+  --surface-muted: var(--fill);
+  --fill-secondary: var(--fill);
+  --glass-border-strong: var(--border);
+  --accent-2: var(--accent);
+  --radius-liquid: var(--radius);
+}
+[data-theme="light"] {
+  color-scheme: light;
+  --text: #1d1d1f;
+  --text-secondary: #55555b;
+  --text-muted: #636368;
+  --accent: #0071e3;
+  --accent-hover: #0077ed;
+  --accent-soft: rgba(0, 113, 227, 0.1);
+  --accent-border-soft: rgba(0, 113, 227, 0.38);
+  --accent-bg-soft: rgba(0, 113, 227, 0.07);
+  --ok-soft: rgba(31, 157, 68, 0.13);
+  --warn-soft: rgba(168, 93, 0, 0.12);
+  --error-soft: rgba(217, 45, 32, 0.1);
+  --focus-ring: rgba(0, 113, 227, 0.35);
+  --status-ok: #1f9d44;
+  --status-warn: #a85d00;
+  --status-error: #d92d20;
+  --status-info: #0071e3;
+  --status-neutral: #6e6e73;
+  --bg: #eef1f8;
+  --surface: rgba(255, 255, 255, 0.72);
+  --surface-solid: #ffffff;
+  --rail-bg: rgba(255, 255, 255, 0.58);
+  --header-bg: rgba(246, 247, 252, 0.6);
+  --card-hover: rgba(255, 255, 255, 0.88);
+  --fill: rgba(120, 120, 128, 0.12);
+  --fill-strong: rgba(120, 120, 128, 0.2);
+  --border: rgba(60, 60, 67, 0.14);
+  --hover-bg: rgba(0, 0, 0, 0.045);
+  --btn-hover-bg: rgba(0, 0, 0, 0.07);
+  --code-bg: rgba(120, 120, 128, 0.14);
+  --icon-badge-bg: rgba(120, 120, 128, 0.12);
+  --overlay-bg: rgba(0, 0, 0, 0.26);
+  --palette-overlay: rgba(0, 0, 0, 0.26);
+  --glass-edge: rgba(255, 255, 255, 0.9);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --shadow-sm: 0 0 0 0.5px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 22px -10px rgba(30, 40, 80, 0.16);
+  --shadow-md: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 14px 36px -8px rgba(30, 40, 80, 0.26);
+  --wallpaper:
+    radial-gradient(60% 70% at 10% 6%, #a9cdff 0%, transparent 60%),
+    radial-gradient(55% 60% at 90% 4%, #ffc6e0 0%, transparent 62%),
+    radial-gradient(60% 65% at 80% 98%, #ffdcab 0%, transparent 60%),
+    radial-gradient(50% 60% at 4% 94%, #b4f2dd 0%, transparent 60%);
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root { --glass-blur: none; --surface: var(--surface-solid); --rail-bg: var(--surface-solid); --header-bg: var(--bg); }
+  [data-theme="light"] { --surface: var(--surface-solid); --rail-bg: var(--surface-solid); --header-bg: var(--bg); }
+}
