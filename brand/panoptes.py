@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
 """Generate the Argus "Panoptes" brand SVGs.
 
-Argus Panoptes was the hundred-eyed watchman: the mark is a ring of eight eyes
+Argus Panoptes was the hundred-eyed watchman: the mark is a ring of six eyes
 around a central pupil whose green dot is the product's health light. Run
 `python3 brand/panoptes.py` to rewrite the SVGs in this directory, then
 `brand/build-icons.sh` to rasterize the app/tray icons.
@@ -29,6 +29,8 @@ HERE = Path(__file__).resolve().parent
 GREEN = "#30d158"
 INK = "#0b0a1c"  # dark used for pupils on the icon background
 VIOLET, CYAN = "#c58bff", "#2de2e6"
+EYES = 6  # bold, evenly spaced; reads down to 16px
+STEP = 360 / EYES
 
 
 def almond(cx: float, cy: float, length: float, half_h: float, deg: float, fill: str) -> str:
@@ -57,8 +59,8 @@ def defs(p: str, *, background: bool = True) -> str:
 
 def eyes(p: str, *, length: float, half_h: float, radius: float, pupils: bool, pupil_fill: str) -> list[str]:
     out = []
-    for i in range(8):
-        ang = i * 45
+    for i in range(EYES):
+        ang = i * STEP
         cx, cy = polar(radius, ang)
         out.append(almond(cx, cy, length, half_h, ang, f"url(#{p}g)"))
         if pupils:
@@ -69,7 +71,7 @@ def eyes(p: str, *, length: float, half_h: float, radius: float, pupils: bool, p
 
 def icon(p: str = "ai") -> str:
     parts = [defs(p), f'<rect width="1024" height="1024" rx="229" fill="url(#{p}bg)"/>']
-    parts += eyes(p, length=230, half_h=62, radius=292, pupils=True, pupil_fill=INK)
+    parts += eyes(p, length=250, half_h=78, radius=300, pupils=True, pupil_fill=INK)
     parts += [
         f'<circle cx="512" cy="512" r="124" fill="url(#{p}g)"/>',
         f'<circle cx="512" cy="512" r="60" fill="{INK}"/>',
@@ -80,7 +82,7 @@ def icon(p: str = "ai") -> str:
 
 def icon_small(p: str = "as") -> str:
     parts = [defs(p), f'<rect width="1024" height="1024" rx="229" fill="url(#{p}bg)"/>']
-    parts += eyes(p, length=270, half_h=84, radius=300, pupils=False, pupil_fill=INK)
+    parts += eyes(p, length=270, half_h=92, radius=300, pupils=False, pupil_fill=INK)
     parts += [
         f'<circle cx="512" cy="512" r="150" fill="url(#{p}g)"/>',
         f'<circle cx="512" cy="512" r="82" fill="{INK}"/>',
@@ -92,13 +94,13 @@ def icon_small(p: str = "as") -> str:
 def mark(p: str = "am") -> str:
     """Transparent background; pupils and the centre hole are knocked out with a mask."""
     cut = []
-    for i in range(8):
-        px, py = polar(300, i * 45)
+    for i in range(EYES):
+        px, py = polar(300, i * STEP)
         cut.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="22" fill="#000"/>')
     cut.append('<circle cx="512" cy="512" r="60" fill="#000"/>')
     mask = f'<mask id="{p}m"><rect width="1024" height="1024" fill="#fff"/>{"".join(cut)}</mask>'
     body = "\n".join(
-        eyes(p, length=230, half_h=62, radius=292, pupils=False, pupil_fill=INK)
+        eyes(p, length=250, half_h=78, radius=300, pupils=False, pupil_fill=INK)
         + [f'<circle cx="512" cy="512" r="124" fill="url(#{p}g)"/>']
     )
     return (
@@ -111,9 +113,9 @@ def template() -> str:
     """Pure black on transparent so macOS can tint it for light/dark menu bars."""
     cut = '<circle cx="512" cy="512" r="70" fill="#000"/>'
     body = []
-    for i in range(8):
-        cx, cy = polar(300, i * 45)
-        body.append(almond(cx, cy, 270, 84, i * 45, "#000"))
+    for i in range(EYES):
+        cx, cy = polar(300, i * STEP)
+        body.append(almond(cx, cy, 270, 84, i * STEP, "#000"))
     body.append('<circle cx="512" cy="512" r="150" fill="#000"/>')
     mask = f'<mask id="tm"><rect width="1024" height="1024" fill="#fff"/>{cut}</mask>'
     return f'{mask}<g mask="url(#tm)">{"".join(body)}</g><circle cx="512" cy="512" r="38" fill="#000"/>'

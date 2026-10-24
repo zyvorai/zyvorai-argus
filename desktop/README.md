@@ -144,7 +144,7 @@ make desktop-build-signed   # fails fast with a clear message if any of these ar
 
 ## Icons
 
-The app icon is the Argus "Panoptes" mark (a ring of eight eyes around a
+The app icon is the Argus "Panoptes" mark (a ring of six eyes around a
 pupil with a green status light). The source of truth is `../brand/`:
 `argus-icon.svg` (full detail), `argus-icon-small.svg` (favicon and sizes of
 32 px and below) and `argus-mark-template.svg` (black on transparent, for the
