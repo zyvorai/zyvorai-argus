@@ -107,7 +107,7 @@ def test_tray_uses_the_template_icon_and_the_app_is_0_1_3():
     import json
 
     conf = json.loads((ROOT / "desktop" / "src-tauri" / "tauri.conf.json").read_text())
-    assert conf["version"] == "0.1.3"
+    assert conf["version"] == "0.1.4"
     assert f'version = "{conf["version"]}"' in (ROOT / "desktop" / "src-tauri" / "Cargo.toml").read_text()
     assert json.loads((ROOT / "desktop" / "package.json").read_text())["version"] == conf["version"]
     assert conf["app"]["windows"][0]["titleBarStyle"] == "Overlay"
