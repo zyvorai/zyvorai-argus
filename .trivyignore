@@ -1,14 +1,20 @@
 # Vulnerabilities in npm's OWN bundled internal dependencies (not this project's
 # runtime dependency graph — `npm ls` shows none of these), disclosed after the
-# latest npm release that still supports this image's Node 20 (npm 12+ requires
-# Node >=22). Re-check and remove these as soon as a Node-20-compatible npm
-# release ships a fix, or the base image moves to Node 22+.
+# newest npm release this image can use (the base is Node 25; npm 12 declares
+# support for Node 22/24/26 only). Re-check and remove these as soon as an npm
+# release that supports the base image ships a fix, or the base image moves.
 CVE-2026-14257  # brace-expansion (npm-bundled) — fixed only in npm 12+ (Node >=22)
 CVE-2026-69152  # brace-expansion (npm-bundled) — fixed only in npm 12+ (Node >=22)
 CVE-2026-69192  # ip-address (npm-bundled, via socks) — no Node-20-compatible npm fix yet
 CVE-2026-102276  # brace-expansion (npm-bundled) — fixed only in npm 12+ (Node >=22)
 CVE-2026-102278  # brace-expansion (npm-bundled) — fixed only in npm 12+ (Node >=22)
 CVE-2026-19534  # undici (npm-bundled) — no Node-20-compatible npm fix yet
+# GHSA-xjj6-f33q-929c: undici DoS via unhandled error on excessive content-encodings;
+# fixed in undici 6.29.1 / 7.30.1 / 8.12.2, but the newest npm releases (11.21.1 and
+# 12.2.1) still bundle 6.29.0. Reachable only if npm itself fetches from a hostile
+# server; the image never runs `npm install` at runtime (npm is just copied along
+# with the Node runtime). Checked against the npm tarballs on 2026-10-24.
+CVE-2026-109869  # undici (npm-bundled) — fixed in 6.29.1, newest npm bundles 6.29.0
 CVE-2026-73566  # tar (npm-bundled) — fixed only in npm 12+ (Node >=22); confirmed via usr/local/lib/node_modules/npm/node_modules/tar
 
 # msgpack (GHSA-6v7p-g79w-8964) and setuptools (CVE-2025-47273) are pinned past

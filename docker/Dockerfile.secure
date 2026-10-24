@@ -3,10 +3,11 @@
 # syntax=docker/dockerfile:1.7
 FROM node:25-bookworm-slim AS node-deps
 WORKDIR /app
-# Patches CVEs in npm's own bundled deps (tar, brace-expansion) before anything
-# under /usr/local/lib/node_modules gets copied into the final image. Pinned
-# (not @latest) because npm 12+ requires Node >=22, newer than this image's Node 20.
-RUN npm install -g npm@11.19.0
+# Refreshes npm's own bundled deps (tar, brace-expansion, ip-address, undici) before
+# anything under /usr/local/lib/node_modules gets copied into the final image. Pinned
+# to the newest npm 11 (not @latest): npm 12 declares support for Node 22/24/26 only,
+# and this image's base is Node 25. Re-check when a release bundles undici >= 6.29.1.
+RUN npm install -g npm@11.21.1
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 RUN npx playwright install --with-deps chromium
