@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from urllib.parse import urlsplit
 
 import httpx
 import pytest
@@ -39,7 +40,8 @@ def test_disabled_by_default(monkeypatch):
 
 
 def test_accepts_allowlisted_https_host():
-    assert callbacks.validate_callback_url("https://hooks.example.com/x").startswith("https://hooks.example.com")
+    clean = urlsplit(callbacks.validate_callback_url("https://hooks.example.com/x"))
+    assert (clean.scheme, clean.hostname, clean.path) == ("https", "hooks.example.com", "/x")
 
 
 @pytest.mark.parametrize(
