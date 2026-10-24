@@ -90,3 +90,24 @@ def test_dashboard_favicon_script_still_paints_a_status_light():
     html = _env().get_template("dashboard.html.j2").render(refresh_interval_ms=5000, desktop_mode=False)
     assert "function setFavicon(status)" in html
     assert "FAVICON_MARK_SRC" in html and "STATUS_DOT[status]" in html
+
+
+def test_desktop_static_pages_use_the_new_mark_and_no_longer_the_orange_accent():
+    public = ROOT / "desktop" / "public"
+    assert (public / "argus-icon.svg").read_text() == (BRAND / "argus-icon-small.svg").read_text()
+    index = (public / "index.html").read_text()
+    assert 'src="argus-icon.svg"' in index
+    for page in ("index.html", "settings.html"):
+        assert "#ff8a3d" not in (public / page).read_text(), page
+
+
+def test_tray_uses_the_template_icon_and_the_app_is_0_1_3():
+    lib = (ROOT / "desktop" / "src-tauri" / "src" / "lib.rs").read_text()
+    assert "tray-template@2x.png" in lib and "icon_as_template(true)" in lib
+    import json
+
+    conf = json.loads((ROOT / "desktop" / "src-tauri" / "tauri.conf.json").read_text())
+    assert conf["version"] == "0.1.3"
+    assert f'version = "{conf["version"]}"' in (ROOT / "desktop" / "src-tauri" / "Cargo.toml").read_text()
+    assert json.loads((ROOT / "desktop" / "package.json").read_text())["version"] == conf["version"]
+    assert conf["app"]["windows"][0]["titleBarStyle"] == "Overlay"

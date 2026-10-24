@@ -221,3 +221,13 @@ def test_ask_panel_and_script_markup_have_no_repeated_static_inline_styles():
         assert repeated not in js, repeated
     # what is left is dynamic (colours computed at runtime) or a one-off
     assert js.count('style="') < 40
+
+
+def test_desktop_mode_marks_the_body_and_keeps_controls_below_the_title_bar():
+    assert '<body class="is-desktop">' in _dashboard(desktop_mode=True)
+    assert "<body>" in _dashboard(desktop_mode=False)
+    layout = (CSS / "_layout.css.j2").read_text()
+    assert ".is-desktop .global-header { padding-top: 34px; }" in layout
+    assert ".is-desktop .rail-brand" in layout and "padding-top: 44px" in layout
+    # narrow windows still collapse the sidebar in desktop mode
+    assert ".is-desktop .main-column, .is-desktop.rail-collapsed .main-column { margin-left: 0; }" in layout

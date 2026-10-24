@@ -17,7 +17,7 @@
 </script>
 {% include 'dashboard/styles.html.j2' %}
 </head>
-<body>
+<body{% if desktop_mode %} class="is-desktop"{% endif %}>
 <a class="skip-link" href="#main-content">Skip to main content</a>
 
 <div class="rail-overlay" id="rail-overlay" aria-hidden="true"></div>

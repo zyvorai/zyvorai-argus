@@ -40,6 +40,9 @@ fi
 png "$TEMPLATE" 44 "$ICONS/tray-template.png"
 png "$TEMPLATE" 88 "$ICONS/tray-template@2x.png"
 
+# Static launch/settings pages of the desktop app
+cp "$SMALL" desktop/public/argus-icon.svg
+
 # Site
 cp "$SMALL" site/favicon.svg
 png "$ICON" 180 site/apple-touch-icon.png

@@ -4,29 +4,52 @@
   <meta charset="utf-8" />
   <title>Settings</title>
   <style>
-    :root { color-scheme: dark; --bg: #0b0b0f; --fg: #e8e8ec; --muted: #8a8a96; --accent: #ff8a3d; }
-    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
-    body { padding: 22px; box-sizing: border-box; }
-    h1 { font-size: 14px; font-weight: 600; margin: 0 0 4px; }
-    p.hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 0 0 16px; }
-    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; margin-top: 14px; }
-    input {
-      width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: var(--fg);
-      padding: 8px 10px; font-size: 13px; font-family: ui-monospace, monospace;
+    :root {
+      color-scheme: dark light;
+      --bg: #0c0d12; --fg: #f5f5f7; --muted: rgba(235,235,245,0.62); --accent: #2997ff; --accent-fill: #0a6cf0;
+      --err: #ff453a; --ok: #30d158; --fill: rgba(120,120,128,0.24); --edge: rgba(255,255,255,0.12);
+      --card: rgba(44,44,50,0.62);
+      --wallpaper: radial-gradient(55% 60% at 8% 4%, rgba(60,90,220,0.34), transparent 62%),
+        radial-gradient(50% 55% at 94% 6%, rgba(150,70,200,0.26), transparent 64%),
+        radial-gradient(60% 60% at 82% 98%, rgba(30,170,190,0.2), transparent 62%);
     }
-    input:focus { outline: none; border-color: var(--accent); }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #eef1f8; --fg: #1d1d1f; --muted: #55555b; --accent: #0071e3; --err: #d92d20; --ok: #1f9d44;
+        --fill: rgba(120,120,128,0.14); --edge: rgba(60,60,67,0.14); --card: rgba(255,255,255,0.72);
+        --wallpaper: radial-gradient(60% 70% at 10% 6%, #a9cdff, transparent 60%),
+          radial-gradient(55% 60% at 90% 4%, #ffc6e0, transparent 62%),
+          radial-gradient(60% 65% at 80% 98%, #ffdcab, transparent 60%);
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--wallpaper), var(--bg); background-attachment: fixed; color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    code { background: var(--fill); padding: 2px 6px; border-radius: 6px; font-size: 0.92em; }
+    :focus-visible { outline: 3px solid rgba(41,151,255,0.45); outline-offset: 2px; }
+    body { padding: 22px; }
+    h1 { font-size: 14px; font-weight: 650; margin: 0 0 4px; }
+    p.hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 0 0 16px; }
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; margin-top: 14px; }
+    input {
+      width: 100%; background: var(--fill); border: 1px solid transparent; border-radius: 12px; color: var(--fg);
+      padding: 0 12px; min-height: 36px; font-size: 13px; font-family: ui-monospace, "SF Mono", monospace;
+    }
+    input:hover { background: rgba(120,120,128,0.3); }
+    input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(41,151,255,0.35); }
     .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
     button {
-      border: none; border-radius: 6px; padding: 7px 14px; font-size: 13px;
-      cursor: pointer; background: rgba(255,255,255,0.08); color: var(--fg);
+      border: none; border-radius: 980px; padding: 0 16px; min-height: 34px; font-size: 13px; font-weight: 550;
+      cursor: pointer; background: var(--fill); color: var(--fg); font-family: inherit;
     }
-    button.primary { background: var(--accent); color: #0b0b0f; font-weight: 600; }
+    button:hover { background: rgba(120,120,128,0.3); }
+    button.primary { background: var(--accent-fill); color: #fff; }
+    button.primary:hover { background: #1a7bff; }
     button:disabled { opacity: 0.5; cursor: default; }
     #status { font-size: 12px; color: var(--muted); margin-top: 10px; min-height: 16px; }
-    #status.ok { color: #7ee787; }
-    #status.err { color: #ff8a8a; }
+    #status.ok { color: var(--ok); }
+    #status.err { color: var(--err); }
+    .h2 { margin-top: 22px; }
   </style>
 </head>
 <body>
@@ -38,7 +61,7 @@
   <label for="bin-path">Path override</label>
   <input id="bin-path" placeholder="/path/to/venv/bin/argus" autocomplete="off" spellcheck="false" />
 
-  <h1 style="margin-top:22px">Remote Mission Control</h1>
+  <h1 class="h2">Remote Mission Control</h1>
   <p class="hint">
     Open the desktop shell against a lab/team <code>argus serve</code>
     (Chromium + Playwright stay on the remote). Example:

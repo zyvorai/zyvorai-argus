@@ -9,6 +9,7 @@ mod server;
 use paths::AppSettings;
 use server::ServerState;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::image::Image;
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
@@ -80,8 +81,15 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<monitor::Handles> {
             "tray_quit" => app.exit(0),
             _ => {}
         });
-    if let Some(icon) = app.default_window_icon() {
-        builder = builder.icon(icon.clone());
+    // A monochrome template image: macOS tints it for light and dark menu bars. Fall
+    // back to the colour app icon if the embedded PNG ever fails to decode.
+    match Image::from_bytes(include_bytes!("../icons/tray-template@2x.png")) {
+        Ok(icon) => builder = builder.icon(icon).icon_as_template(true),
+        Err(_) => {
+            if let Some(icon) = app.default_window_icon() {
+                builder = builder.icon(icon.clone());
+            }
+        }
     }
     let tray = builder.build(app)?;
     Ok(monitor::Handles { tray, running, findings })
