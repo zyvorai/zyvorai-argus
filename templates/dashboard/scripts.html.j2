@@ -366,7 +366,7 @@ function renderWorkloads(w) {
     html += '<div class="glass card"><div class="k">cron/' + esc(c.name) + '</div>'
       + '<div class="v">' + (c.suspend ? "suspended" : (cd ? "in " + cd : esc(c.schedule))) + '</div>'
       + '<div class="d">' + esc(c.schedule) + ' · last: ' + relIso(c.last_schedule)
-      + (c.active ? ' · <b style="color:var(--status-warn)">running now</b>' : "") + '</div></div>';
+      + (c.active ? ' · <b class="c-warn">running now</b>' : "") + '</div></div>';
   }
   el.innerHTML = html;
 }
@@ -406,7 +406,7 @@ function renderPods(data) {
       + (image ? '<span><b>' + esc(image) + '</b></span>' : "")
       + '</div>'
       + (p.warnings && p.warnings.length ? '<div class="warn" title="' + esc(p.warnings.join("\n")) + '">⚠ ' + esc(p.warnings[p.warnings.length - 1]) + '</div>' : "")
-      + '<div class="meta" style="margin-top:8px"><button class="dl-btn pod-restart" data-pod="' + esc(p.name) + '">⟳ restart</button></div>'
+      + '<div class="meta mt-8"><button class="dl-btn pod-restart" data-pod="' + esc(p.name) + '">⟳ restart</button></div>'
       + '</div>';
   }).join("");
   for (const card of el.querySelectorAll(".pod")) {
@@ -501,13 +501,13 @@ async function loadFindings() {
       el.innerHTML = '<span class="d">No findings yet — run API-contract, auth, live-data, vitals or audit and issues will collect here.</span>';
       return;
     }
-    el.innerHTML = '<div style="overflow-x:auto"><table class="runs-table"><tbody>'
+    el.innerHTML = '<div class="scroll-x"><table class="runs-table"><tbody>'
       + "<tr><th>severity</th><th>source</th><th>what's broken</th><th>detail</th><th>where</th><th>when</th></tr>"
       + data.findings.map((f) => "<tr>"
         + '<td><span class="chip" style="color:' + (SEV_COLOR[f.severity] || "") + '">' + esc(f.severity) + "</span></td>"
         + '<td class="d">' + esc(KIND_LABELS[f.source] || f.source) + "</td>"
         + "<td>" + esc(f.title) + (f.url ? ' <span class="d">· ' + esc(f.url) + "</span>" : "") + "</td>"
-        + '<td class="d" style="max-width:340px">' + esc(f.detail || "") + "</td>"
+        + '<td class="d mw-340">' + esc(f.detail || "") + "</td>"
         + '<td class="d"><code>' + esc(f.where || "") + "</code></td>"
         + '<td class="d">' + relIso(f.at) + "</td></tr>").join("")
       + "</tbody></table></div>";
@@ -526,10 +526,10 @@ async function loadEngagements() {
     if (!list.length) {
       el.innerHTML = '<span class="d">No engagements yet — create one above to unlock the cards below.</span>';
     } else {
-      el.innerHTML = '<div style="overflow-x:auto"><table class="runs-table"><tbody>'
+      el.innerHTML = '<div class="scroll-x"><table class="runs-table"><tbody>'
         + "<tr><th>target</th><th>tier</th><th>scope</th><th>status</th><th></th></tr>"
         + list.map((e) => "<tr><td><code>" + esc(e.target_pattern) + "</code></td><td class=\"d\">" + esc(e.tier) + "</td>"
-          + '<td class="d" style="max-width:260px">' + esc(e.scope_statement) + "</td>"
+          + '<td class="d mw-260">' + esc(e.scope_statement) + "</td>"
           + "<td>" + (e.revoked_at ? '<span class="chip fail">revoked</span>' : '<span class="chip pass">active</span>') + "</td>"
           + "<td>" + (e.revoked_at ? "" : '<button class="dl-btn eng-revoke" data-id="' + esc(e.id) + '">revoke</button>') + "</td></tr>").join("")
         + "</tbody></table></div>";
@@ -589,9 +589,9 @@ async function loadRequirements() {
       el.innerHTML = '<span class="d">No requirements yet — run a pipeline against a <code>github</code> or <code>document</code> source and they\'ll collect here.</span>';
       return;
     }
-    el.innerHTML = '<div style="overflow-x:auto"><table class="runs-table"><tbody>'
+    el.innerHTML = '<div class="scroll-x"><table class="runs-table"><tbody>'
       + "<tr><th>title</th><th>source</th><th>version</th><th>quality</th><th>updated</th></tr>"
-      + list.map((r) => '<tr class="req-row" data-id="' + esc(r.id) + '" style="cursor:pointer">'
+      + list.map((r) => '<tr class="req-row pointer" data-id="' + esc(r.id) + '">'
         + "<td>" + esc(r.title) + '<div class="d"><code>' + esc(r.id) + "</code></div></td>"
         + '<td class="d">' + esc(r.source_type) + (r.origin_id ? ' <span class="d">· ' + esc(r.origin_id) + "</span>" : "") + "</td>"
         + '<td class="d">v' + esc(r.latest_version) + "</td>"
@@ -623,7 +623,7 @@ async function openRequirementDetail(id) {
     const versions = (hist.versions || []).slice().reverse();
     const versionsHtml = versions.map((v) => {
       const tests = v.linked_tests || [];
-      return '<div style="padding:8px 0;border-top:1px solid var(--border)">'
+      return '<div class="py-8 bt">'
         + '<div><b>v' + esc(v.version) + '</b> <span class="d">' + relIso(v.created_at) + '</span>'
         + ' <span class="chip" style="color:' + scoreColor(v.quality_score) + '">score ' + (v.quality_score != null ? Math.round(v.quality_score) : "—") + "</span></div>"
         + (tests.length
@@ -632,9 +632,9 @@ async function openRequirementDetail(id) {
         + "</div>";
     }).join("");
     body.innerHTML = '<div class="d">' + esc(detail.source_type || "") + (detail.origin_id ? " · " + esc(detail.origin_id) : "") + "</div>"
-      + '<div style="margin-top:10px"><b>Description</b><div class="d" style="white-space:pre-wrap;margin-top:2px">' + esc((detail.content && detail.content.description) || "") + "</div></div>"
-      + '<div style="margin-top:10px"><b>Quality issues</b>' + issuesHtml + "</div>"
-      + '<div style="margin-top:10px"><b>Version history</b>' + (versionsHtml || '<span class="d">none</span>') + "</div>";
+      + '<div class="mt-10"><b>Description</b><div class="d pre-wrap mt-2">' + esc((detail.content && detail.content.description) || "") + "</div></div>"
+      + '<div class="mt-10"><b>Quality issues</b>' + issuesHtml + "</div>"
+      + '<div class="mt-10"><b>Version history</b>' + (versionsHtml || '<span class="d">none</span>') + "</div>";
   } catch (e) {
     body.innerHTML = '<span class="d">failed to load — ' + esc(String(e)) + "</span>";
   }
@@ -648,8 +648,8 @@ async function loadRequirementImpact() {
     const models = Object.entries(graph.data_models || {}).filter(([, ids]) => ids.length > 1);
     const modelsEl = $("req-data-models");
     modelsEl.innerHTML = models.length
-      ? models.map(([name, ids]) => '<div style="padding:6px 0;border-top:1px solid var(--border)"><b>' + esc(name) + "</b><div class=\"d\" style=\"margin-top:2px\">"
-          + ids.map((id) => '<a href="#requirements" class="req-link" data-id="' + esc(id) + '" style="cursor:pointer;text-decoration:underline">' + esc(id) + "</a>").join(", ")
+      ? models.map(([name, ids]) => '<div class="py-6 bt"><b>' + esc(name) + "</b><div class=\"d\" style=\"margin-top:2px\">"
+          + ids.map((id) => '<a href="#requirements" class="req-link pointer underline" data-id="' + esc(id) + '">' + esc(id) + "</a>").join(", ")
           + "</div></div>").join("")
       : '<span class="d">No data model is shared by more than one requirement yet.</span>';
 
@@ -657,7 +657,7 @@ async function loadRequirementImpact() {
     const edgesEl = $("req-model-edges");
     if (edgesEl) {
       edgesEl.innerHTML = edges.length
-        ? edges.slice(0, 40).map((e) => '<div style="padding:6px 0;border-top:1px solid var(--border)"><b>'
+        ? edges.slice(0, 40).map((e) => '<div class="py-6 bt"><b>'
             + esc(e.a) + "</b> ↔ <b>" + esc(e.b) + "</b>"
             + '<span class="d"> · weight ' + esc(String(e.weight || 1)) + "</span></div>").join("")
         : '<span class="d">No co-occurrence edges yet (need ≥2 models on one requirement).</span>';
@@ -668,7 +668,7 @@ async function loadRequirementImpact() {
     const canvas = $("req-dep-canvas");
     if (depsEl) {
       depsEl.innerHTML = deps.length
-        ? deps.slice(0, 40).map((d) => '<div style="padding:6px 0;border-top:1px solid var(--border)"><b>'
+        ? deps.slice(0, 40).map((d) => '<div class="py-6 bt"><b>'
             + esc(d.source) + "</b> → <b>" + esc(d.target) + "</b>"
             + '<span class="d"> · ' + esc(d.relation || "depends_on")
             + (d.requirement_id ? " · " + esc(d.requirement_id) : "") + "</span></div>").join("")
@@ -712,9 +712,9 @@ async function loadRequirementImpact() {
     const flows = Object.entries(graph.flows || {});
     const flowsEl = $("req-flows");
     flowsEl.innerHTML = flows.length
-      ? flows.map(([name, info]) => '<div style="padding:6px 0;border-top:1px solid var(--border)"><b>' + esc(name) + "</b>"
-          + '<div class="d" style="margin-top:2px">requirements: ' + info.requirements.map((id) => '<a href="#requirements" class="req-link" data-id="' + esc(id) + '" style="cursor:pointer;text-decoration:underline">' + esc(id) + "</a>").join(", ") + "</div>"
-          + (info.tests.length ? '<div class="d" style="margin-top:2px">tests: ' + info.tests.map((t) => "<code>" + esc(t) + "</code>").join(", ") + "</div>" : "")
+      ? flows.map(([name, info]) => '<div class="py-6 bt"><b>' + esc(name) + "</b>"
+          + '<div class="d mt-2">requirements: ' + info.requirements.map((id) => '<a href="#requirements" class="req-link pointer underline" data-id="' + esc(id) + '">' + esc(id) + "</a>").join(", ") + "</div>"
+          + (info.tests.length ? '<div class="d mt-2">tests: ' + info.tests.map((t) => "<code>" + esc(t) + "</code>").join(", ") + "</div>" : "")
           + "</div>").join("")
       : '<span class="d">No requirement has a flow tagged yet.</span>';
 
@@ -814,7 +814,7 @@ async function loadEvents() {
       + '<td><span class="chip ' + (e.type === "Warning" ? "fail" : "pass") + '">' + esc(e.type) + "</span></td>"
       + "<td>" + esc(e.reason) + (e.count > 1 ? " ×" + e.count : "") + "</td>"
       + "<td>" + esc(e.object) + "</td>"
-      + '<td style="max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(e.message) + '">' + esc(e.message) + "</td></tr>"
+      + '<td title="' + esc(e.message) + '" class="mw-420 ov-hidden ellipsis nowrap">' + esc(e.message) + "</td></tr>"
     ).join("");
   } catch (err) {
     $("events-table").querySelector("tbody").innerHTML = "<tr><td>failed: " + esc(String(err)) + "</td></tr>";
@@ -2018,7 +2018,7 @@ function renderJobResult(st) {
   const r = st.result || {};
   let dur = "";
   if (st.started_at && st.finished_at) {
-    dur = ' <span class="d" style="font-weight:400">· took ' + rel(Math.max(0, (new Date(st.finished_at) - new Date(st.started_at)) / 1000 | 0)) + "</span>";
+    dur = ' <span class="d fw-400">· took ' + rel(Math.max(0, (new Date(st.finished_at) - new Date(st.started_at)) / 1000 | 0)) + "</span>";
   }
   let html = '<div class="result-title">' + esc(KIND_LABELS[st.kind] || st.kind) + " result" + dur + "</div>";
 
@@ -2028,15 +2028,15 @@ function renderJobResult(st) {
     let out = "";
     if (fails.length) {
       out += '<div class="err-summary"><div class="k">⚠ ' + fails.length + " failure(s)</div>"
-        + fails.map((c) => '<div style="margin-bottom:8px"><b>' + esc(c.title) + "</b> "
+        + fails.map((c) => '<div class="mb-8"><b>' + esc(c.title) + "</b> "
           + '<button class="copy-btn" data-copy="' + encodeURIComponent(c.error || "") + '">⧉ copy</button>'
-          + (c.hint ? '<div style="color:var(--accent-2);font-size:0.875rem;margin:2px 0">💡 ' + esc(c.hint) + "</div>" : "")
+          + (c.hint ? '<div style="color:var(--accent-2);margin:2px 0" class="fs-875">💡 ' + esc(c.hint) + "</div>" : "")
           + '<div class="case-err">' + esc((c.error || "").slice(0, 600))
           + (c.console_logs && c.console_logs.length ? "\nconsole: " + esc(c.console_logs.join("\n")) : "")
           + (c.network_errors && c.network_errors.length ? "\nnetwork: " + esc(c.network_errors.join("\n")) : "")
           + "</div></div>").join("") + "</div>";
     }
-    out += '<div style="margin:6px 0"><label class="chk"><input type="checkbox" id="fails-only"> failures only</label></div>';
+    out += '<div class="my-6"><label class="chk"><input type="checkbox" id="fails-only"> failures only</label></div>';
     out += '<table class="runs-table" id="case-table"><tbody>'
       + cases.map((c) => '<tr class="case-row ' + (c.status === "passed" ? "" : "is-fail") + '">'
         + '<td><span class="chip ' + (c.status === "passed" ? "pass" : "fail") + '">'
@@ -2045,7 +2045,7 @@ function renderJobResult(st) {
         + '<td class="d">' + (c.duration_ms != null ? c.duration_ms + "ms" : "") + "</td>"
         + "<td>" + (c.video ? '<a class="rlink" href="' + esc(c.video) + '" target="_blank">🎬</a> ' : "")
         + (c.trace ? '<a class="rlink" href="' + esc(c.trace) + '" target="_blank">🔍</a>' : "") + "</td>"
-        + '<td style="max-width:420px;color:var(--status-error);font-size:0.875rem">' + esc((c.error || "").slice(0, 200)) + "</td></tr>").join("")
+        + '<td class="mw-420 c-error fs-875">' + esc((c.error || "").slice(0, 200)) + "</td></tr>").join("")
       + "</tbody></table>";
     return out;
   };
@@ -2067,9 +2067,9 @@ function renderJobResult(st) {
     html += '<div class="d"><span class="chip ' + sc + '" style="' + (r.status === "warn" ? "color:var(--status-warn)" : "") + '">'
       + esc((r.status || "").toUpperCase()) + "</span> " + esc(r.summary || "") + "</div>";
     if (r.issues && r.issues.length) {
-      html += '<div class="err-summary" style="margin:8px 0">' + r.issues.map((i) => '<div class="case-err">' + esc(i) + "</div>").join("") + "</div>";
+      html += '<div class="err-summary my-8">' + r.issues.map((i) => '<div class="case-err">' + esc(i) + "</div>").join("") + "</div>";
     }
-    html += '<div style="overflow-x:auto"><table class="runs-table" style="margin-top:6px"><tbody>'
+    html += '<div class="scroll-x"><table class="runs-table mt-6"><tbody>'
       + "<tr>" + r.columns.map((c) => "<th style=\"text-align:left;color:var(--text-muted);font-size:11px\">" + esc(c) + "</th>").join("") + "</tr>"
       + r.rows.map((row) => "<tr>" + row.map((cell, ci) => "<td" + (ci === 0 ? ' class="d"' : "") + ">" + esc(String(cell)) + "</td>").join("") + "</tr>").join("")
       + "</tbody></table></div>";
@@ -2086,7 +2086,7 @@ function renderJobResult(st) {
   } else if (st.kind === "discover") {
     html += '<div class="d">' + r.inventory + " candidates · " + r.gaps_total + " gaps · " + r.files_scanned + " files scanned</div>";
     if (r.gaps && r.gaps.length) {
-      html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+      html += '<table class="runs-table mt-8"><tbody>'
         + r.gaps.map((g) => "<tr><td>" + esc(g.kind) + "</td><td>" + esc(g.path) + "</td><td>" + esc(g.title) + "</td><td>" + esc(g.priority) + "</td></tr>").join("")
         + "</tbody></table>";
     }
@@ -2095,19 +2095,19 @@ function renderJobResult(st) {
     html += '<div class="d">' + files.length + " test file(s) generated"
       + (r.requirements != null ? " from " + r.requirements + " requirement(s)" : "")
       + (r.total != null ? " · executed: " + r.passed + "/" + r.total + " passed" : "") + "</div>";
-    html += '<div class="result-files" style="margin-top:6px">' + files.map(esc).join("<br>") + "</div>";
+    html += '<div class="result-files mt-6">' + files.map(esc).join("<br>") + "</div>";
   } else if (st.kind === "ai_flow") {
     html += '<div class="d"><b class="' + (r.success ? "pass" : "fail") + '">' + (r.success ? "✅ goal achieved" : "⚠ stopped") + "</b> · "
       + esc(r.goal) + ' <span class="d">· ' + esc(r.mode || "") + " agent</span></div>";
     if (r.summary) html += '<div class="d" style="margin:4px 0">' + esc(r.summary) + "</div>";
-    if (r.video) html += '<video controls src="' + esc(r.video) + '" style="max-width:min(920px,100%);width:100%;border:1px solid var(--separator);border-radius:12px;margin:10px 0"></video>';
-    if (r.trace) html += '<div class="dl-row" style="margin:2px 0 8px">🔍 <a class="rlink" href="' + esc(r.trace) + '" target="_blank">download trace.zip</a></div>';
-    html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+    if (r.video) html += '<video controls src="' + esc(r.video) + '" class="mw-shot w-full b-sep r-12 my-10"></video>';
+    if (r.trace) html += '<div class="dl-row m-2-0-8">🔍 <a class="rlink" href="' + esc(r.trace) + '" target="_blank">download trace.zip</a></div>';
+    html += '<table class="runs-table mt-6"><tbody>'
       + (r.ai_steps || []).map((s) => "<tr><td>" + s.n + "</td>"
         + '<td><span class="chip ' + (s.status === "passed" ? "pass" : "fail") + '">' + (s.status === "passed" ? "OK" : "FAIL") + "</span></td>"
         + "<td>" + esc(s.desc || s.action) + "</td>"
         + "<td>" + (s.shot ? '<a class="rlink" href="' + esc(s.shot) + '" target="_blank">shot</a>' : "")
-        + '</td><td class="d" style="color:var(--status-error);max-width:300px">' + esc(s.error || "") + "</td></tr>").join("")
+        + '</td><td class="d c-error mw-300">' + esc(s.error || "") + "</td></tr>").join("")
       + "</tbody></table>";
   } else if (st.kind === "flow") {
     html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total + " steps passed</b> · "
@@ -2115,21 +2115,21 @@ function renderJobResult(st) {
       + (r.browser && r.browser !== "chromium" ? " · " + esc(r.browser) : "")
       + (r.device && r.device !== "desktop" ? " · " + esc(r.device) : "")
       + (r.throttle && r.throttle !== "none" ? " · " + esc(r.throttle) : "") + "</div>";
-    if (r.video) html += '<video controls src="' + esc(r.video) + '" style="max-width:min(920px,100%);width:100%;border:1px solid var(--separator);border-radius:12px;margin:10px 0"></video>';
-    if (r.trace) html += '<div class="dl-row" style="margin:2px 0 8px">🔍 <a class="rlink" href="' + esc(r.trace) + '" target="_blank">download trace.zip</a> <span class="d">— open at trace.playwright.dev for step-by-step DOM/network/console</span></div>';
-    html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+    if (r.video) html += '<video controls src="' + esc(r.video) + '" class="mw-shot w-full b-sep r-12 my-10"></video>';
+    if (r.trace) html += '<div class="dl-row m-2-0-8">🔍 <a class="rlink" href="' + esc(r.trace) + '" target="_blank">download trace.zip</a> <span class="d">— open at trace.playwright.dev for step-by-step DOM/network/console</span></div>';
+    html += '<table class="runs-table mt-6"><tbody>'
       + (r.flow_steps || []).map((s) => "<tr><td>" + s.n + "</td>"
         + '<td><span class="chip ' + (s.status === "passed" ? "pass" : "fail") + '">' + (s.status === "passed" ? "PASS" : "FAIL") + "</span></td>"
         + "<td>" + esc(s.desc) + "</td>"
         + "<td>" + (s.shot ? '<a class="rlink" href="' + esc(s.shot) + '" target="_blank">shot</a>' : "") + "</td>"
-        + '<td style="color:var(--status-error);font-size:0.875rem;max-width:480px">' + esc(s.error || "")
+        + '<td class="c-error fs-875 mw-480">' + esc(s.error || "")
         + (s.hint ? '<div style="color:var(--accent-2)">💡 ' + esc(s.hint) + "</div>" : "") + "</td></tr>").join("")
       + "</tbody></table>";
   } else if (st.kind === "route_sweep") {
     html += '<div class="d">' + r.routes + " route(s) × " + (r.viewports || []).join("/") + " · "
       + (r.baselines_updated ? '<span class="pass">' + r.new_baselines + " baseline(s) captured</span>"
          : '<span class="' + (r.fail_count ? "fail" : "pass") + '">' + r.fail_count + " changed</span>") + "</div>";
-    html += '<div style="overflow-x:auto"><table class="runs-table" style="margin-top:6px"><tbody>'
+    html += '<div class="scroll-x"><table class="runs-table mt-6"><tbody>'
       + "<tr><th>route</th><th>viewport</th><th>status</th><th>diff</th><th></th></tr>"
       + (r.sweep_rows || []).map((x) => "<tr><td>" + esc(x.route) + "</td><td class=\"d\">" + esc(x.viewport) + "</td>"
         + '<td style="color:' + (x.status === "fail" ? "var(--status-error)" : x.status === "baseline" ? "var(--status-warn)" : "var(--status-ok)") + '">' + esc(x.status) + "</td>"
@@ -2140,80 +2140,80 @@ function renderJobResult(st) {
     html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total
       + " checks passed</b> · " + esc(r.url) + " · " + esc(r.mode) + " mode</div>";
     const rows = r.mode === "spec" ? (r.endpoints || []) : (r.steps || []);
-    html += '<div style="overflow-x:auto"><table class="runs-table" style="margin-top:6px"><tbody>'
+    html += '<div class="scroll-x"><table class="runs-table mt-6"><tbody>'
       + (r.mode === "spec" ? "<tr><th>method</th><th>path</th><th>status</th><th>result</th><th>schema / note</th><th>ms</th></tr>"
                            : "<tr><th>#</th><th>step</th><th>status</th><th>result</th><th>error</th><th>ms</th></tr>")
       + rows.map((x) => "<tr>"
         + (r.mode === "spec"
             ? "<td><b>" + esc(x.method) + "</b></td><td><code>" + esc(x.path) + "</code></td><td>" + x.status + "</td>"
               + '<td><span class="chip ' + (x.ok ? "pass" : "fail") + '">' + (x.ok ? "OK" : "FAIL") + "</span></td>"
-              + '<td style="color:var(--status-error);font-size:0.875rem;max-width:480px">' + esc((x.schema_errors || []).join("; ") || x.note || "") + "</td>"
+              + '<td class="c-error fs-875 mw-480">' + esc((x.schema_errors || []).join("; ") || x.note || "") + "</td>"
             : "<td>" + x.n + "</td><td>" + esc(x.desc) + "</td><td>" + x.status + "</td>"
               + '<td><span class="chip ' + (x.ok ? "pass" : "fail") + '">' + (x.ok ? "OK" : "FAIL") + "</span></td>"
-              + '<td style="color:var(--status-error);font-size:0.875rem;max-width:480px">' + esc(x.error || "") + "</td>")
+              + '<td class="c-error fs-875 mw-480">' + esc(x.error || "") + "</td>")
         + "<td>" + (x.latency_ms || 0) + "</td></tr>").join("")
       + "</tbody></table></div>";
   } else if (st.kind === "vitals") {
     const gc = (g) => g === "good" ? "var(--status-ok)" : g === "poor" ? "var(--status-error)" : "var(--status-warn)";
     html += '<div class="d">overall <b style="color:' + gc(r.overall) + '">' + esc((r.overall || "").toUpperCase()) + "</b> · "
       + esc(r.url) + " · " + esc(r.device || "desktop") + (r.throttle && r.throttle !== "none" ? " · " + esc(r.throttle) : "") + "</div>";
-    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+    html += '<div class="d-flex gap-8 wrap mt-10">'
       + Object.entries(r.metrics || {}).map(([k, m]) =>
-          '<div class="stat-tile" style="padding:8px 12px"><span class="stat-label">' + k + '</span>'
+          '<div class="stat-tile p-8-12"><span class="stat-label">' + k + '</span>'
           + '<span class="stat-value" style="font-size:1rem;color:' + gc(m.grade) + '">'
           + (m.value == null ? "—" : m.value + (k === "CLS" ? "" : "ms")) + "</span></div>").join("") + "</div>";
-    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" style="max-width:min(920px,100%);width:100%;border:1px solid var(--separator);border-radius:12px;margin-top:10px">';
+    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" class="mw-shot w-full b-sep r-12 mt-10">';
   } else if (st.kind === "realtime") {
     html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total + " checks passed</b> · " + esc(r.url)
       + (r.live ? " · page <b style=\"color:" + (r.live.classification === "ok" ? "var(--status-ok)" : "var(--status-error)") + '">' + esc(r.live.classification) + "</b>" : "") + "</div>";
-    html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+    html += '<table class="runs-table mt-6"><tbody>'
       + (r.checks || []).map((c) => "<tr>"
         + '<td><span class="chip ' + (c.ok ? "pass" : "fail") + '">' + (c.ok ? "OK" : "FAIL") + "</span></td>"
         + "<td>" + esc(c.name) + '</td><td class="d">' + esc(c.detail || "") + "</td></tr>").join("")
       + "</tbody></table>";
-    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" style="max-width:min(920px,100%);width:100%;border:1px solid var(--separator);border-radius:12px;margin-top:10px">';
+    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" class="mw-shot w-full b-sep r-12 mt-10">';
   } else if (st.kind === "auth_test") {
     html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total + " checks passed</b> · " + esc(r.url)
       + (r.session_name ? ' · session <code>' + esc(r.session_name) + "</code> (reuse via <b>session</b> on flow/live-data)" : "") + "</div>";
-    html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+    html += '<table class="runs-table mt-6"><tbody>'
       + (r.checks || []).map((c) => "<tr>"
         + '<td><span class="chip ' + (c.ok ? "pass" : "fail") + '">' + (c.ok ? "OK" : "FAIL") + "</span></td>"
         + "<td>" + esc(c.name) + '</td><td class="d">' + esc(c.detail || "") + "</td></tr>").join("")
       + "</tbody></table>";
-    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" style="max-width:min(920px,100%);width:100%;border:1px solid var(--separator);border-radius:12px;margin-top:10px">';
+    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" class="mw-shot w-full b-sep r-12 mt-10">';
   } else if (st.kind === "har_replay") {
     html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total + " checks</b> · "
       + esc(r.mode || "") + " · " + esc(r.base || r.url || "")
       + (r.har ? ' · <code>' + esc(r.har_rel || r.har) + "</code>" : "") + "</div>";
-    html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+    html += '<table class="runs-table mt-6"><tbody>'
       + (r.checks || []).map((c) => "<tr>"
         + '<td><span class="chip ' + (c.ok ? "pass" : "fail") + '">' + (c.ok ? "OK" : "FAIL") + "</span></td>"
         + "<td>" + esc(c.name) + '</td><td class="d">' + esc(c.detail || "") + "</td></tr>").join("")
       + "</tbody></table>";
-    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" style="max-width:min(920px,100%);width:100%;border:1px solid var(--separator);border-radius:12px;margin-top:10px">';
+    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" class="mw-shot w-full b-sep r-12 mt-10">';
   } else if (st.kind === "import_codegen") {
     const steps = r.imported_steps || r.steps || [];
     html += '<div class="d">imported <b>' + (r.step_count || steps.length) + "</b> step(s)"
       + (r.total != null ? " · flow " + r.passed + "/" + r.total + " passed" : " (parse only)") + "</div>";
     if (steps.length) {
-      html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+      html += '<table class="runs-table mt-6"><tbody>'
         + steps.map((s, i) => "<tr><td class=\"d\">" + (i + 1) + "</td><td>" + esc(s.action) + "</td>"
           + "<td>" + esc(s.target || s.assertion || s.value || "") + "</td></tr>").join("")
         + "</tbody></table>";
     }
-    if (r.video) html += '<video controls src="' + esc(r.video) + '" style="max-width:min(920px,100%);width:100%;border:1px solid var(--separator);border-radius:12px;margin:10px 0"></video>';
+    if (r.video) html += '<video controls src="' + esc(r.video) + '" class="mw-shot w-full b-sep r-12 my-10"></video>';
   } else if (st.kind === "loadtest") {
     html += '<div class="d">' + esc(r.url) + " — " + r.requests + " requests · " + r.concurrency + " concurrent · "
       + '<b>' + r.rps + " req/s</b> · <span class=\"" + (r.success_pct >= 99 ? "pass" : "fail") + '">' + r.success_pct + "% ok</span></div>";
-    const cell = (k, v) => '<div class="stat-tile" style="padding:8px 12px"><span class="stat-label">' + k + '</span><span class="stat-value" style="font-size:1rem">' + v + "ms</span></div>";
-    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+    const cell = (k, v) => '<div class="stat-tile p-8-12"><span class="stat-label">' + k + '</span><span class="stat-value" style="font-size:1rem">' + v + "ms</span></div>";
+    html += '<div class="d-flex gap-8 wrap mt-10">'
       + cell("p50", r.p50) + cell("p95", r.p95) + cell("p99", r.p99) + cell("max", r.max) + cell("mean", r.mean) + "</div>";
   } else if (st.kind === "tls") {
     const sc = r.status === "ok" ? "pass" : "fail";
     html += '<div class="d"><span class="chip ' + sc + '">' + esc(r.status.toUpperCase()) + "</span> "
       + esc(r.host) + ":" + r.port + " → " + esc((r.ips || []).join(", ")) + "</div>";
     const row = (k, v) => "<tr><td class=\"d\" style=\"width:130px\">" + k + "</td><td>" + esc(String(v)) + "</td></tr>";
-    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+    html += '<table class="runs-table mt-8"><tbody>'
       + row("expires in", (r.days_left != null ? r.days_left + " days" : "?") + " (" + esc(r.expiry || "") + ")")
       + row("issuer", r.issuer) + row("subject", r.subject)
       + row("protocol", r.protocol + " · " + r.cipher)
@@ -2222,41 +2222,41 @@ function renderJobResult(st) {
     const same = r.identical;
     html += '<div class="d">' + (same ? '<span class="pass">identical</span>' : '<span class="fail">' + r.diff_percent + "% different</span>")
       + " — " + esc(r.url_a) + " vs " + esc(r.url_b) + "</div>";
-    html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">'
+    html += '<div class="d-flex gap-12 wrap mt-10">'
       + [["A", r.a_href], ["B", r.b_href], ["diff", r.diff_href]].map(([lbl, href]) =>
-        '<div><div class="d" style="margin-bottom:4px">' + lbl + "</div>"
-        + '<a href="' + esc(href) + '" target="_blank"><img src="' + esc(href) + '" style="max-width:230px;border:1px solid var(--separator);border-radius:8px"></a></div>').join("")
+        '<div><div class="d mb-4">' + lbl + "</div>"
+        + '<a href="' + esc(href) + '" target="_blank"><img src="' + esc(href) + '" class="mw-230 b-sep r-8"></a></div>').join("")
       + "</div>";
   } else if (st.kind === "ping") {
     html += '<div class="d"><span class="pass">' + r.up + " up</span>"
       + (r.down ? ' · <span class="fail">' + r.down + " down</span>" : "") + " of " + r.total + "</div>";
-    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+    html += '<table class="runs-table mt-8"><tbody>'
       + (r.results || []).map((x) => "<tr><td><span class=\"chip " + (x.ok ? "pass" : "fail") + '">' + (x.status || "ERR") + "</span></td>"
         + "<td>" + esc(x.url) + "</td><td class=\"d\">" + (x.ms != null ? x.ms + "ms" : esc(x.error || "")) + "</td></tr>").join("")
       + "</tbody></table>";
   } else if (st.kind === "screenshot") {
     html += '<div class="d">' + esc(r.url) + " — HTTP " + (r.status || "?") + " · " + esc(r.title || "") + "</div>";
-    html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">'
-      + (r.shots || []).map((s) => '<div><div class="d" style="margin-bottom:4px">' + esc(s.viewport) + " · " + s.width + "×" + s.height + '</div>'
-        + '<a href="' + esc(s.href) + '" target="_blank"><img src="' + esc(s.href) + '" style="max-width:280px;border:1px solid var(--separator);border-radius:8px"></a></div>').join("")
+    html += '<div class="d-flex gap-12 wrap mt-10">'
+      + (r.shots || []).map((s) => '<div><div class="d mb-4">' + esc(s.viewport) + " · " + s.width + "×" + s.height + '</div>'
+        + '<a href="' + esc(s.href) + '" target="_blank"><img src="' + esc(s.href) + '" style="max-width:280px" class="b-sep r-8"></a></div>').join("")
       + "</div>";
   } else if (st.kind === "audit") {
     const checks = r.checks || [];
     const gc = r.grade === "A" ? "var(--status-ok)" : r.grade === "F" || r.grade === "D" ? "var(--status-error)" : "var(--status-warn)";
-    html += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">'
-      + '<div style="font-size:44px;font-weight:800;line-height:1;color:' + gc + '">' + esc(r.grade || "?") + "</div>"
-      + '<div><div style="font-weight:600">Health score ' + (r.score != null ? r.score + "/100" : "") + "</div>"
+    html += '<div class="d-flex ai-center gap-14 mb-6">'
+      + '<div style="color:' + gc + '" class="fs-44 fw-800 lh-1">' + esc(r.grade || "?") + "</div>"
+      + '<div><div class="fw-600">Health score ' + (r.score != null ? r.score + "/100" : "") + "</div>"
       + '<div class="d">' + esc(r.url) + " — " + r.pages_audited + " page(s) · "
       + '<span class="fail">' + r.fail_count + " failing</span> · "
-      + '<span style="color:var(--status-warn)">' + r.warn_count + " warnings</span></div></div></div>";
+      + '<span class="c-warn">' + r.warn_count + " warnings</span></div></div></div>";
     // summary tiles per check
-    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">'
+    html += '<div class="d-flex gap-8 wrap my-8">'
       + checks.map((c) => { const b = (r.by_check || {})[c] || {}; return '<span class="chip">' + esc(c) + ': '
         + '<span class="pass">' + (b.ok || 0) + "✓</span>"
-        + (b.warn ? ' <span style="color:var(--status-warn)">' + b.warn + "!</span>" : "")
+        + (b.warn ? ' <span class="c-warn">' + b.warn + "!</span>" : "")
         + (b.fail ? ' <span class="fail">' + b.fail + "✗</span>" : "") + "</span>"; }).join("") + "</div>";
     // pages × checks matrix
-    html += '<div style="overflow-x:auto"><table class="runs-table"><tbody>'
+    html += '<div class="scroll-x"><table class="runs-table"><tbody>'
       + "<tr><td><b>Page</b></td>" + checks.map((c) => "<td><b>" + esc(c) + "</b></td>").join("") + "</tr>"
       + (r.audit_pages || []).map((p) => "<tr><td>" + esc(p.path) + '</td>'
         + checks.map((c) => { const chk = (p.checks || {})[c]; if (!chk) return '<td class="d">–</td>';
@@ -2268,7 +2268,7 @@ function renderJobResult(st) {
   } else if (st.kind === "flaky") {
     html += '<div class="d">' + r.runs + " runs · <b class=\"" + (r.flaky_count ? "fail" : "pass") + "\">"
       + r.flaky_count + " flaky test(s)</b></div>";
-    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+    html += '<table class="runs-table mt-8"><tbody>'
       + (r.flaky_cases || []).slice(0, 30).map((c) => "<tr><td>"
         + '<span class="chip ' + (c.status === "passed" ? "pass" : "fail") + '">'
         + (c.status === "flaky" ? "FLAKY" : c.status.toUpperCase()) + "</span></td>"
@@ -2278,27 +2278,27 @@ function renderJobResult(st) {
   } else if (st.kind === "regression") {
     html += '<div class="d">' + (r.baselines_updated ? "baselines updated · " : "") + (r.diffs || []).length + " screenshot(s) compared</div>";
     if (r.diffs && r.diffs.length) {
-      html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+      html += '<table class="runs-table mt-8"><tbody>'
         + r.diffs.map((d) => "<tr><td>" + esc(d.file) + '</td><td><span class="chip ' + (d.status === "fail" ? "fail" : "pass") + '">' + esc(d.status) + "</span></td><td>" + (d.diff_percent ?? 0) + "%</td><td>"
           + (d.diff_href ? '<a class="rlink" href="' + esc(d.diff_href) + '" target="_blank">diff image</a>' : esc(d.message || "")) + "</td></tr>").join("")
         + "</tbody></table>";
     }
   } else if (st.kind === "misconfig_scan") {
     const gc = r.grade === "A" ? "var(--status-ok)" : (r.grade === "F" || r.grade === "D") ? "var(--status-error)" : "var(--status-warn)";
-    html += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">'
-      + '<div style="font-size:44px;font-weight:800;line-height:1;color:' + gc + '">' + esc(r.grade || "?") + "</div>"
-      + '<div><div style="font-weight:600">Score ' + (r.score != null ? r.score + "/100" : "") + "</div>"
+    html += '<div class="d-flex ai-center gap-14 mb-6">'
+      + '<div style="color:' + gc + '" class="fs-44 fw-800 lh-1">' + esc(r.grade || "?") + "</div>"
+      + '<div><div class="fw-600">Score ' + (r.score != null ? r.score + "/100" : "") + "</div>"
       + '<div class="d">' + esc(r.url) + " — " + ((r.paths && r.paths.exposed) || []).length + " exposed path(s) · headers "
       + esc((r.headers && r.headers.status) || "?") + "</div></div></div>";
     if (r.tech && ((r.tech.signatures && r.tech.signatures.length) || (r.tech.versions && r.tech.versions.length))) {
-      html += '<div class="d" style="margin-bottom:6px">detected: ' + esc((r.tech.signatures || []).join(", "))
+      html += '<div class="d mb-6">detected: ' + esc((r.tech.signatures || []).join(", "))
         + " " + (r.tech.versions || []).map((v) => esc(v.product + " " + v.version)).join(", ") + "</div>";
     }
     html += '<div class="d">findings, if any, appear in the 🐞 Findings panel below.</div>';
   } else if (st.kind === "cve_lookup") {
     html += '<div class="d">' + esc(r.url) + " — <b class=\"" + (r.total_matches ? "fail" : "pass") + '">'
       + r.total_matches + " known advisory match(es)</b> across " + (r.identified || []).length + " identified component(s)</div>";
-    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+    html += '<table class="runs-table mt-8"><tbody>'
       + "<tr><th>product</th><th>version</th><th>matches</th></tr>"
       + (r.results || []).map((x) => "<tr><td>" + esc(x.product) + "</td><td>" + esc(x.version) + "</td><td>"
         + ((x.matches && x.matches.length)
@@ -2307,11 +2307,11 @@ function renderJobResult(st) {
       + "</tbody></table>";
   } else if (st.kind === "llm_redteam") {
     const gc = r.grade === "A" ? "var(--status-ok)" : (r.grade === "F" || r.grade === "D") ? "var(--status-error)" : "var(--status-warn)";
-    html += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">'
-      + '<div style="font-size:44px;font-weight:800;line-height:1;color:' + gc + '">' + esc(r.grade || "?") + "</div>"
-      + '<div><div style="font-weight:600">' + r.resisted + "/" + r.total + " prompts resisted</div>"
+    html += '<div class="d-flex ai-center gap-14 mb-6">'
+      + '<div style="color:' + gc + '" class="fs-44 fw-800 lh-1">' + esc(r.grade || "?") + "</div>"
+      + '<div><div class="fw-600">' + r.resisted + "/" + r.total + " prompts resisted</div>"
       + '<div class="d">target: ' + esc(r.target) + "</div></div></div>";
-    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+    html += '<table class="runs-table mt-8"><tbody>'
       + "<tr><th>attack</th><th>category</th><th>result</th></tr>"
       + (r.results || []).map((x) => "<tr><td><code>" + esc(x.id) + "</code></td><td class=\"d\">" + esc(x.category) + "</td><td>"
         + (x.resisted == null ? '<span class="chip">error</span>' : '<span class="chip ' + (x.resisted ? "pass" : "fail") + '">' + (x.resisted ? "resisted" : "COMPROMISED") + "</span>") + "</td></tr>").join("")
@@ -2319,25 +2319,25 @@ function renderJobResult(st) {
   } else if (st.kind === "exploit_poc" || st.kind === "host_pentest" || st.kind === "cloud_pentest") {
     const label = st.kind === "exploit_poc" ? esc(r.url) : st.kind === "host_pentest" ? esc(r.host) : esc(r.provider) + ":" + esc(r.target);
     html += '<div class="d"><span class="chip ' + (r.verified ? "fail" : "pass") + '">' + (r.verified ? "VERIFIED" : "not verified") + "</span> "
-      + label + (r.timed_out ? ' · <span style="color:var(--status-warn)">timed out</span>' : "") + "</div>";
-    if (r.reason) html += '<div class="d" style="margin-top:6px">' + esc(r.reason) + "</div>";
-    html += '<div class="d" style="margin-top:8px">PoC: <code>' + esc(r.poc_path || "") + "</code> (sha256 " + esc((r.code_sha256 || "").slice(0, 12)) + "…)</div>";
-    if (r.stdout) html += '<pre style="margin-top:8px;max-height:220px;overflow:auto;font-size:.8rem">' + esc(r.stdout) + "</pre>";
+      + label + (r.timed_out ? ' · <span class="c-warn">timed out</span>' : "") + "</div>";
+    if (r.reason) html += '<div class="d mt-6">' + esc(r.reason) + "</div>";
+    html += '<div class="d mt-8">PoC: <code>' + esc(r.poc_path || "") + "</code> (sha256 " + esc((r.code_sha256 || "").slice(0, 12)) + "…)</div>";
+    if (r.stdout) html += '<pre style="max-height:220px;overflow:auto;font-size:.8rem" class="mt-8">' + esc(r.stdout) + "</pre>";
   } else if (st.kind === "attack_chain") {
     html += '<div class="d">' + r.confirmed_count + "/" + (r.steps || []).length + " step(s) confirmed — " + esc(r.stop_reason) + "</div>";
-    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+    html += '<table class="runs-table mt-8"><tbody>'
       + "<tr><th>step</th><th>description</th><th>result</th></tr>"
       + (r.steps || []).map((s) => "<tr><td>" + s.step + "</td><td>" + esc(s.description) + "</td><td>"
         + '<span class="chip ' + (s.verified ? "fail" : "pass") + '">' + (s.verified ? "VERIFIED" : "not verified") + "</span></td></tr>").join("")
       + "</tbody></table>";
   } else if (st.kind === "port_scan") {
     html += '<div class="d">' + esc(r.host) + " — <b>" + (r.open_ports || []).length + " open</b> of " + (r.scanned || 0) + " scanned</div>";
-    html += '<div class="d" style="margin-top:6px">' + esc((r.open_ports || []).join(", ") || "none") + "</div>";
+    html += '<div class="d mt-6">' + esc((r.open_ports || []).join(", ") || "none") + "</div>";
   } else if (st.kind === "tls_cipher_scan") {
     const gc = r.grade === "A" ? "var(--status-ok)" : (r.grade === "F" || r.grade === "D") ? "var(--status-error)" : "var(--status-warn)";
-    html += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">'
-      + '<div style="font-size:44px;font-weight:800;line-height:1;color:' + gc + '">' + esc(r.grade || "?") + "</div>"
-      + '<div><div style="font-weight:600">' + esc((r.negotiated && r.negotiated.cipher) || "no handshake") + "</div>"
+    html += '<div class="d-flex ai-center gap-14 mb-6">'
+      + '<div style="color:' + gc + '" class="fs-44 fw-800 lh-1">' + esc(r.grade || "?") + "</div>"
+      + '<div><div class="fw-600">' + esc((r.negotiated && r.negotiated.cipher) || "no handshake") + "</div>"
       + '<div class="d">' + esc(r.host) + ":" + (r.port || 443) + "</div></div></div>";
     if ((r.issues || []).length) html += '<ul class="d">' + r.issues.map((i) => "<li>" + esc(i) + "</li>").join("") + "</ul>";
   } else if (["dast_scan","injection_scan","csrf_probe","ssrf_probe","auth_attack_scan","idor_scan"].includes(st.kind)) {
@@ -2345,7 +2345,7 @@ function renderJobResult(st) {
     html += '<div class="d">' + esc(r.url || "") + " — <b class=\"" + (items.length ? "fail" : "pass") + '">'
       + items.length + " finding(s)</b></div>";
     if (items.length) {
-      html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+      html += '<table class="runs-table mt-8"><tbody>'
         + "<tr><th>sev</th><th>title</th><th>where</th></tr>"
         + items.map((f) => "<tr><td><span class=\"chip fail\">" + esc(f.severity || "") + "</span></td><td>"
           + esc(f.title || "") + "</td><td class=\"d\">" + esc(f.where || "") + "</td></tr>").join("")
@@ -2355,7 +2355,7 @@ function renderJobResult(st) {
     html += '<div class="d">' + r.passed + "/" + r.total + " passed"
       + (r.report ? ' · <a class="rlink" href="' + esc(r.report) + '" target="_blank">📄 open report</a>' : "") + "</div>";
     if (r.generated && r.generated.length) {
-      html += '<div class="result-files" style="margin-top:6px">' + r.generated.map(esc).join("<br>") + "</div>";
+      html += '<div class="result-files mt-6">' + r.generated.map(esc).join("<br>") + "</div>";
     }
     html += caseTable(r.cases);
   }

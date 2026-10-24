@@ -192,3 +192,32 @@ def test_auth_and_visual_compare_read_their_own_fields():
     html = _dashboard()
     assert 'id="auth-url"' in html and 'id="vcmp-a"' in html
     assert 'id="cmp-a"' in html and 'aria-label="Baseline run"' in html  # the Compare-runs select keeps its id
+
+
+UTILITY_CLASS = re.compile(
+    r"^(ml-auto|ml-8|pointer|span-all|span-2|flex-row|d-flex|ai-center|wrap|nodeco|plain|underline|pre-wrap|nowrap|ellipsis|ov-hidden|"
+    r"scroll-x|bt|c-warn|c-error|b-sep|r-8|r-12|w-full|lh-1|out-pre|mw-shot|"
+    r"(fw|fs|mb|mt|my|py|pt|p|m|gap|w|mw|mh)-[\d-]+)$"
+)
+
+
+def test_every_utility_class_used_in_markup_and_script_is_defined():
+    css = "\n".join(p.read_text() for p in CSS.glob("*.j2"))
+    sources = [_panel(n) for n in ("ask", *PANELS_A, *PANELS_B)]
+    sources.append((TEMPLATES / "dashboard" / "scripts.html.j2").read_text())
+    used = set()
+    for src in sources:
+        for cls in re.findall(r'class=\\?"([^"\\]*)', src):
+            used.update(c for c in cls.split() if UTILITY_CLASS.match(c))
+    assert len(used) > 20
+    missing = [c for c in sorted(used) if not re.search(r"\.%s\s*[{,]" % re.escape(c), css)]
+    assert missing == [], missing
+
+
+def test_ask_panel_and_script_markup_have_no_repeated_static_inline_styles():
+    assert 'style="' not in _panel("ask").replace('style="display:none"', "")
+    js = (TEMPLATES / "dashboard" / "scripts.html.j2").read_text()
+    for repeated in ('style="margin-top:6px"', 'style="margin-top:8px"', 'style="overflow-x:auto"', 'style="font-weight:600"'):
+        assert repeated not in js, repeated
+    # what is left is dynamic (colours computed at runtime) or a one-off
+    assert js.count('style="') < 40
