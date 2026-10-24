@@ -132,3 +132,44 @@ def test_list_job_kinds_only_returns_allowed_kinds():
     result = asyncio.run(job_tools.list_job_kinds())
 
     assert set(result["kinds"]) == set(ALLOWED_KINDS)
+
+
+class _FindingsClient:
+    def __init__(self):
+        self.calls = []
+
+    async def list_findings(self, *, severity="", limit=50):
+        self.calls.append((severity, limit))
+        return {"findings": [], "total": 0, "counts": {}}
+
+    async def list_schedules(self):
+        return {"schedules": [{"id": "s1", "kind": "smoke"}]}
+
+
+def test_get_findings_normalises_and_clamps():
+    client = _FindingsClient()
+    result = asyncio.run(job_tools.get_findings(client, " HIGH ", 9999))
+    assert result["total"] == 0
+    assert client.calls == [("high", 200)]
+
+
+def test_get_findings_rejects_unknown_severity_without_calling_api():
+    client = _FindingsClient()
+    result = asyncio.run(job_tools.get_findings(client, "scary"))
+    assert result["status_code"] == 400 and client.calls == []
+
+
+def test_get_findings_and_schedules_surface_api_errors():
+    class _Err:
+        async def list_findings(self, **kw):
+            raise ZyvorApiError(403, "missing scope")
+
+        async def list_schedules(self):
+            raise ZyvorApiError(403, "missing scope")
+
+    assert asyncio.run(job_tools.get_findings(_Err()))["status_code"] == 403
+    assert asyncio.run(job_tools.list_schedules(_Err()))["error"] == "missing scope"
+
+
+def test_list_schedules_returns_api_payload():
+    assert asyncio.run(job_tools.list_schedules(_FindingsClient()))["schedules"][0]["id"] == "s1"

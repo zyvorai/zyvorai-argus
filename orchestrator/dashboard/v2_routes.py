@@ -41,6 +41,7 @@ async def enqueue_job(request: Request, payload: dict[str, Any] = Body(...)) -> 
             requested_by=identity.subject,
             idempotency_key=request.headers.get("idempotency-key") or payload.get("idempotency_key"),
             priority=max(1, min(int(payload.get("priority") or 100), 1000)),
+            callback_url=str(payload["callback_url"]) if payload.get("callback_url") else None,
         )
     except (ValueError, TargetPolicyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

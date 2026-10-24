@@ -59,12 +59,15 @@ _SCHEMA_STATEMENTS = [
         error TEXT,
         cancel_requested INTEGER NOT NULL DEFAULT 0,
         attempt INTEGER NOT NULL DEFAULT 0,
-        trace_context TEXT
+        trace_context TEXT,
+        callback_url TEXT
     )""",
     # Added in schema v4: `ALTER ... IF NOT EXISTS` so it's a no-op against a
     # jobs table already created (without the column) by an older version --
     # same story as SQLite's PRAGMA table_info(jobs) check in store.py.
     """ALTER TABLE jobs ADD COLUMN IF NOT EXISTS trace_context TEXT""",
+    # jobs.callback_url (SQLite schema v7): never returned by _job() or audited.
+    """ALTER TABLE jobs ADD COLUMN IF NOT EXISTS callback_url TEXT""",
     """CREATE UNIQUE INDEX IF NOT EXISTS jobs_idempotency_uq
         ON jobs(idempotency_key) WHERE idempotency_key IS NOT NULL""",
     """CREATE INDEX IF NOT EXISTS jobs_status_priority_idx ON jobs(status, priority, queued_at)""",
@@ -210,6 +213,7 @@ class PostgresStore:
         priority: int = 100,
         idempotency_key: str | None = None,
         trace_context: str | None = None,
+        callback_url: str | None = None,
     ) -> dict[str, Any]:
         assert_persistable(params)
         now = _iso()
@@ -218,9 +222,11 @@ class PostgresStore:
             try:
                 row = conn.execute(
                     """INSERT INTO jobs
-                    (id, kind, params_json, status, priority, idempotency_key, requested_by, queued_at, trace_context)
-                    VALUES (%s, %s, %s, 'queued', %s, %s, %s, %s, %s) RETURNING *""",
-                    (job_id, kind, _json(params), int(priority), idempotency_key, requested_by, now, trace_context),
+                    (id, kind, params_json, status, priority, idempotency_key, requested_by, queued_at,
+                     trace_context, callback_url)
+                    VALUES (%s, %s, %s, 'queued', %s, %s, %s, %s, %s, %s) RETURNING *""",
+                    (job_id, kind, _json(params), int(priority), idempotency_key, requested_by, now,
+                     trace_context, callback_url),
                 ).fetchone()
             except psycopg.errors.UniqueViolation:
                 if not idempotency_key:
@@ -332,6 +338,11 @@ class PostgresStore:
         with self.connect() as conn:
             row = conn.execute("SELECT * FROM jobs WHERE id=%s", (job_id,)).fetchone()
         return self._job(row, reveal_params=reveal_params) if row else None
+
+    def get_job_callback(self, job_id: str) -> str | None:
+        with self.connect() as conn:
+            row = conn.execute("SELECT callback_url FROM jobs WHERE id=%s", (job_id,)).fetchone()
+        return (row["callback_url"] or None) if row else None
 
     def list_jobs(self, limit: int = 50) -> list[dict[str, Any]]:
         with self.connect() as conn:

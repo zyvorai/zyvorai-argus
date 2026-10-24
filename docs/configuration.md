@@ -178,6 +178,36 @@ Consumed by: `agents/discover/crawl.py`, `playwright/scripts/crawl-site.mjs`, `p
 
 ---
 
+## Job completion callbacks
+
+`POST /api/v2/jobs` accepts an optional `"callback_url"`. When that job finishes (succeeded,
+failed or cancelled) Argus POSTs a small notice to it, so a chat agent or CI system is pushed the
+result instead of polling. Off by default.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `ZYVOR_CALLBACKS_ENABLED` | `false` | Master switch. While off, a request with `callback_url` is rejected with 400. |
+| `ZYVOR_CALLBACK_ALLOWLIST` | _(empty)_ | Comma-separated hosts a callback may target (`fnmatch` patterns). `hooks.slack.com` is always allowed. This is separate from `ZYVOR_TARGET_ALLOWLIST`. |
+| `ZYVOR_CALLBACK_SECRET` | _(unset)_ | HMAC key. Required for every non-Slack destination. |
+| `ZYVOR_CALLBACK_ALLOWED_PORTS` | `443` | Allowed destination ports. |
+| `ZYVOR_CALLBACK_ALLOW_HTTP` | `false` | Allow plain `http://` (ignored when `ZYVOR_ENV=production`). |
+| `ZYVOR_CALLBACK_ALLOW_PRIVATE` | `false` | Allow private/loopback addresses (lab use only). |
+| `ZYVOR_PUBLIC_URL` | _(unset)_ | If set, the notice includes `link` to `/api/v2/jobs/{id}`. |
+
+Body (JSON): `{"event": "job.finished", "job_id", "kind", "status", "duration_s", "link"}`. It never
+contains the job's params, result or error text. Slack webhooks get a `{"text": ...}` message instead.
+
+Verify a notice by recomputing `sha256=` + HMAC-SHA256(`ZYVOR_CALLBACK_SECRET`, `"<X-Zyvor-Timestamp>." + raw body`)
+and comparing it, in constant time, with `X-Zyvor-Signature`; reject timestamps that are too old.
+
+Behaviour worth knowing: the URL is checked when the job is enqueued and again just before each
+send; redirects are not followed; 5xx/429/network errors are retried (3 attempts, 1s then 4s);
+a 4xx is not. The connection is not pinned to the validated IP, so a DNS-rebinding race in that
+short window is narrowed, not eliminated: keep the allowlist to hosts you control. The URL is stored
+in its own column and is never returned by the API or written to the audit log (it can hold a token);
+`job.callback` audit rows record only the host and the result. Callbacks cover jobs enqueued through
+`/api/v2` (the durable queue), not jobs started directly from the dashboard buttons.
+
 ## Mission Control dashboard
 
 | Variable | Default | Description |

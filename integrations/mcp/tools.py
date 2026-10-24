@@ -136,3 +136,25 @@ async def cancel_job(client: ZyvorApiClient, job_id: str) -> dict[str, Any]:
 
 async def list_job_kinds() -> dict[str, Any]:
     return {"kinds": dict(sorted(_JOB_KIND_CATALOG.items()))}
+
+
+_SEVERITIES = {"critical", "high", "medium", "low", "info"}
+
+
+async def get_findings(client: ZyvorApiClient, severity: str = "", limit: int = 50) -> dict[str, Any]:
+    """Open findings, newest first, with per-severity counts. Read-only."""
+    severity = severity.strip().lower()
+    if severity and severity not in _SEVERITIES:
+        return {"error": f"severity must be one of {sorted(_SEVERITIES)}", "status_code": 400}
+    try:
+        return await client.list_findings(severity=severity, limit=max(1, min(int(limit), 200)))
+    except ZyvorApiError as exc:
+        return _error(exc)
+
+
+async def list_schedules(client: ZyvorApiClient) -> dict[str, Any]:
+    """Recurring jobs Mission Control runs on a schedule. Read-only."""
+    try:
+        return await client.list_schedules()
+    except ZyvorApiError as exc:
+        return _error(exc)

@@ -404,3 +404,29 @@ def test_record_webhook_delivery_rejects_empty_delivery_id(tmp_path):
     store = MissionControlStore(tmp_path / "state.db")
     with pytest.raises(ValueError, match="X-GitHub-Delivery is required"):
         store.record_webhook_delivery("", "push", "abc")
+
+
+def test_callback_url_is_stored_but_never_returned(tmp_path):
+    store = MissionControlStore(tmp_path / "state.db")
+    job = store.enqueue_job("smoke", {}, callback_url="https://hooks.example.com/x?token=TOPSECRET")
+
+    assert store.get_job_callback(job["id"]) == "https://hooks.example.com/x?token=TOPSECRET"
+    for view in (job, store.get_job(job["id"], reveal_params=True), *store.list_jobs()):
+        assert "TOPSECRET" not in repr(view)
+        assert "callback_url" not in view
+    assert store.get_job_callback("missing") is None
+    plain = store.enqueue_job("smoke", {})
+    assert store.get_job_callback(plain["id"]) is None
+
+
+def test_callback_column_is_added_to_a_pre_existing_database(tmp_path):
+    import sqlite3
+
+    path = tmp_path / "old.db"
+    MissionControlStore(path)  # create current schema
+    with sqlite3.connect(path) as conn:
+        conn.execute("ALTER TABLE jobs DROP COLUMN callback_url")
+        conn.execute("UPDATE schema_meta SET version=6")
+    store = MissionControlStore(path)  # re-open runs the migration
+    job = store.enqueue_job("smoke", {}, callback_url="https://hooks.example.com/x")
+    assert store.get_job_callback(job["id"]) == "https://hooks.example.com/x"

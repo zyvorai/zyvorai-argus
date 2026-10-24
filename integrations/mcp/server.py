@@ -75,6 +75,29 @@ def build_server(config: MCPConfig) -> FastMCP:
         """List the job kinds runnable via run_job, with a one-line description each."""
         return await job_tools.list_job_kinds()
 
+    @mcp.tool()
+    async def get_findings(severity: str = "", limit: int = 50) -> dict[str, Any]:
+        """List open findings (newest first) with per-severity counts.
+
+        severity optionally filters to one of critical/high/medium/low/info.
+        """
+        return await job_tools.get_findings(client, severity, limit)
+
+    @mcp.tool()
+    async def list_schedules() -> dict[str, Any]:
+        """List the recurring jobs Mission Control runs on a schedule."""
+        return await job_tools.list_schedules(client)
+
+    @mcp.resource("zyvor://findings/open")
+    async def open_findings() -> dict[str, Any]:
+        """Ambient context: the current open findings and their severity counts."""
+        return await job_tools.get_findings(client, "", 100)
+
+    @mcp.resource("zyvor://schedules")
+    async def schedules() -> dict[str, Any]:
+        """Ambient context: the configured recurring jobs."""
+        return await job_tools.list_schedules(client)
+
     return mcp
 
 

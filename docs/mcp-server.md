@@ -24,8 +24,15 @@ Tools (see `integrations/mcp/tools.py` for exact behavior):
 - `get_job_status(job_id)` — poll a previously started job.
 - `cancel_job(job_id)`.
 - `list_job_kinds()` — one-line description of every kind `run_job` accepts.
+- `get_findings(severity="", limit=50)` — open findings, newest first, with per-severity
+  counts (read-only; needs the `findings:read` scope).
+- `list_schedules()` — the recurring jobs Mission Control runs (read-only; needs
+  `schedules:read`).
 
-**Not** exposed in this version: schedules, findings, audit log, or any kind outside the
+Two MCP resources give an agent ambient context without a tool call:
+`zyvor://findings/open` and `zyvor://schedules`.
+
+**Not** exposed in this version: creating or deleting schedules, closing findings, the audit log, or any kind outside the
 allowlist (notably `full`, `loadtest`, `auth_test`, `create`/`generate`, `flow`/`ai_flow`/
 `realtime`/`har_replay`/`import_codegen`). These are deliberate exclusions — see the comment
 at the top of `integrations/mcp/allowlist.py` for the reasoning per kind.
@@ -129,11 +136,9 @@ minted token records before relying on Bearer-token auth in a cluster deployment
 
 ## Future work (explicitly deferred)
 
-- Schedules/findings tools and MCP resources (e.g. `zyvor://findings/open` for ambient
-  context).
-- An outbound completion webhook (`callback_url` on job enqueue) so a chat agent can be
-  pushed a result instead of polling — not built because there's no push mechanism anywhere
-  in Mission Control today, and Hermes's own cron/multi-turn polling covers the "check back
-  later" case without any repo changes.
+- Schedule create/delete and finding-close tools (writes), and a `callback_url` argument on
+  `run_job`. The completion webhook itself exists (see
+  [Job completion callbacks](configuration.md#job-completion-callbacks)); an MCP server cannot
+  receive a push, so it is meant for Slack or CI rather than for this server's own tools.
 - A standalone Kubernetes Deployment/Service for the `streamable-http` transport with a real
   auth layer for public exposure.

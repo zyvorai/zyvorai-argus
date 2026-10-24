@@ -63,3 +63,12 @@ class ZyvorApiClient:
 
     async def cancel_job(self, job_id: str) -> dict[str, Any]:
         return await self._request("POST", f"/api/v2/jobs/{job_id}/cancel")
+
+    async def list_findings(self, *, severity: str = "", limit: int = 50) -> dict[str, Any]:
+        params: dict[str, Any] = {"limit": limit}
+        if severity:
+            params["severity"] = severity
+        return await self._request("GET", "/api/v2/findings", params=params)
+
+    async def list_schedules(self) -> dict[str, Any]:
+        return await self._request("GET", "/api/v2/schedules")

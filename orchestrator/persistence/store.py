@@ -23,7 +23,7 @@ from typing import Any, Iterator
 from orchestrator.security.redaction import redact
 from orchestrator.security.secrets import assert_persistable
 
-_SCHEMA_VERSION = 6
+_SCHEMA_VERSION = 7
 
 DEFAULT_MAX_JOB_ATTEMPTS = 3
 
@@ -95,7 +95,8 @@ class MissionControlStore:
                     error TEXT,
                     cancel_requested INTEGER NOT NULL DEFAULT 0,
                     attempt INTEGER NOT NULL DEFAULT 0,
-                    trace_context TEXT
+                    trace_context TEXT,
+                    callback_url TEXT
                 );
                 CREATE UNIQUE INDEX IF NOT EXISTS jobs_idempotency_uq
                     ON jobs(idempotency_key) WHERE idempotency_key IS NOT NULL;
@@ -221,6 +222,11 @@ class MissionControlStore:
             existing_job_columns = {row["name"] for row in conn.execute("PRAGMA table_info(jobs)")}
             if "trace_context" not in existing_job_columns:
                 conn.execute("ALTER TABLE jobs ADD COLUMN trace_context TEXT")
+            # jobs.callback_url (schema v7): where to POST a completion notice.
+            # Kept out of _job() on purpose -- a URL can carry a token in its
+            # query string, so it is never returned by the API or audited.
+            if "callback_url" not in existing_job_columns:
+                conn.execute("ALTER TABLE jobs ADD COLUMN callback_url TEXT")
             # Same story for requirement_versions.{data_models,flows}_json, added
             # in schema v5 (agents/requirement_entities/ -- impact analysis by
             # shared data model / business flow).
@@ -247,6 +253,7 @@ class MissionControlStore:
         priority: int = 100,
         idempotency_key: str | None = None,
         trace_context: str | None = None,
+        callback_url: str | None = None,
     ) -> dict[str, Any]:
         assert_persistable(params)
         now = _iso()
@@ -255,9 +262,11 @@ class MissionControlStore:
             try:
                 conn.execute(
                     """INSERT INTO jobs
-                    (id, kind, params_json, status, priority, idempotency_key, requested_by, queued_at, trace_context)
-                    VALUES (?, ?, ?, 'queued', ?, ?, ?, ?, ?)""",
-                    (job_id, kind, _json(params), int(priority), idempotency_key, requested_by, now, trace_context),
+                    (id, kind, params_json, status, priority, idempotency_key, requested_by, queued_at,
+                     trace_context, callback_url)
+                    VALUES (?, ?, ?, 'queued', ?, ?, ?, ?, ?, ?)""",
+                    (job_id, kind, _json(params), int(priority), idempotency_key, requested_by, now,
+                     trace_context, callback_url),
                 )
             except sqlite3.IntegrityError:
                 if not idempotency_key:
@@ -365,6 +374,11 @@ class MissionControlStore:
         with self.connect() as conn:
             row = conn.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
         return self._job(row, reveal_params=reveal_params) if row else None
+
+    def get_job_callback(self, job_id: str) -> str | None:
+        with self.connect() as conn:
+            row = conn.execute("SELECT callback_url FROM jobs WHERE id=?", (job_id,)).fetchone()
+        return (row["callback_url"] or None) if row else None
 
     def list_jobs(self, limit: int = 50) -> list[dict[str, Any]]:
         with self.connect() as conn:

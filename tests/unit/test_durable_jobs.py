@@ -95,7 +95,8 @@ def test_enqueue_substitutes_secret_placeholder_for_validation_only(monkeypatch)
     fake_validate.assert_called_once_with("audit", {"token": {"$secret": "env:VALIDATION_PLACEHOLDER"}})
     # ...but the store persists the real (still-a-reference, never-resolved) params.
     fake_store.enqueue_job.assert_called_once_with(
-        "audit", raw_params, requested_by="", idempotency_key=None, priority=100, trace_context=None
+        "audit", raw_params, requested_by="", idempotency_key=None, priority=100, trace_context=None,
+        callback_url=None,
     )
 
 
@@ -417,3 +418,84 @@ def test_scheduler_loop_records_failure_when_enqueue_raises(monkeypatch):
     fake_store.advance_schedule.assert_called_once_with("sched-2", ran=False)
     fake_store.audit.assert_called_once()
     assert fake_store.audit.call_args.kwargs["outcome"] == "failure"
+
+
+# -- completion callbacks ----------------------------------------------------
+
+
+def test_enqueue_validates_and_stores_callback_without_auditing_the_url(monkeypatch):
+    from orchestrator import callbacks
+
+    fake_store = MagicMock()
+    fake_store.enqueue_job.return_value = {"id": "job-1", "kind": "smoke"}
+    service = DurableJobService(store=fake_store)
+    monkeypatch.setattr(jobs_module, "_validate", MagicMock())
+    monkeypatch.setattr(callbacks, "validate_callback_url", lambda url: url + "#clean")
+
+    service.enqueue("smoke", {}, callback_url="https://hooks.example.com/x?token=TOPSECRET")
+
+    assert fake_store.enqueue_job.call_args.kwargs["callback_url"].endswith("#clean")
+    audit_detail = fake_store.audit.call_args.kwargs["detail"]
+    assert audit_detail["callback"] is True
+    assert "TOPSECRET" not in repr(fake_store.audit.call_args)
+
+
+def test_enqueue_rejects_a_bad_callback_before_persisting(monkeypatch):
+    import pytest
+
+    fake_store = MagicMock()
+    service = DurableJobService(store=fake_store)
+    monkeypatch.setattr(jobs_module, "_validate", MagicMock())
+    monkeypatch.delenv("ZYVOR_CALLBACKS_ENABLED", raising=False)
+
+    with pytest.raises(ValueError, match="disabled"):
+        service.enqueue("smoke", {}, callback_url="https://hooks.example.com/x")
+    fake_store.enqueue_job.assert_not_called()
+
+
+def _run_one_job(monkeypatch, *, status_state=None, trigger_error=None, cancelled=False):
+    from orchestrator import callbacks
+
+    service, fake_store = _service_with_mocks()
+    calls = {"n": 0}
+
+    def fake_claim_job():
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return {"id": "job-1", "kind": "smoke", "params": {}}
+        service._stop.set()
+        return None
+
+    fake_store.claim_job.side_effect = fake_claim_job
+    fake_store.cancellation_requested.return_value = cancelled
+    dispatched = []
+    monkeypatch.setattr(callbacks, "dispatch", lambda *a, **k: dispatched.append(a[1:4]))
+    if trigger_error:
+        monkeypatch.setattr(jobs_module, "trigger", MagicMock(side_effect=trigger_error))
+    else:
+        monkeypatch.setattr(jobs_module, "trigger", lambda kind, params: (True, None))
+        monkeypatch.setattr(jobs_module, "status", lambda *a: status_state)
+        monkeypatch.setattr(jobs_module, "cancel", lambda *a: None)
+    service._worker_loop()
+    return dispatched
+
+
+def test_worker_dispatches_callback_on_success(monkeypatch):
+    assert _run_one_job(monkeypatch, status_state={"running": False, "error": None, "result": {}}) == [
+        ("job-1", "smoke", "succeeded")
+    ]
+
+
+def test_worker_dispatches_callback_on_failure(monkeypatch):
+    assert _run_one_job(monkeypatch, status_state={"running": False, "error": "boom"}) == [
+        ("job-1", "smoke", "failed")
+    ]
+
+
+def test_worker_dispatches_callback_on_cancel(monkeypatch):
+    state = {"running": False, "error": "cancelled by user"}
+    assert _run_one_job(monkeypatch, status_state=state, cancelled=True) == [("job-1", "smoke", "cancelled")]
+
+
+def test_worker_dispatches_callback_when_the_job_raises(monkeypatch):
+    assert _run_one_job(monkeypatch, trigger_error=RuntimeError("x")) == [("job-1", "smoke", "failed")]
