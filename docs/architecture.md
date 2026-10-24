@@ -21,7 +21,7 @@ GitHub (specs, issues, PRs, deploy events)          Natural language (CLI)
 │      ├─ log_analyze ─┤                                               │
 │      └─ v8_coverage ─┘                                               │
 │                                                                       │
-│         pass → learn_skills → report → notify                        │
+│         pass → learn_skills → heal_pr → report → notify              │
 │         fail → analyze → autofix → apply_autofix ─┐                  │
 │                       ▲                            │                 │
 │                       └── re-execute (≤ retries) ◄──┘                │
@@ -66,6 +66,7 @@ Defined in [`orchestrator/graph.py`](../orchestrator/graph.py) as a LangGraph `S
 | `autofix` | `nodes/autofix.py` | When `ENABLE_AUTOFIX=true`: checks the [skill store](../agents/autofix/README.md) for a previously-confirmed fix per failed case first, then falls back to an LLM suggestion (`AutofixSuggestion`) for unmatched cases. |
 | `apply_autofix` | `nodes/apply_autofix.py` | When `ENABLE_AUTOFIX_APPLY=true`: patches spec files in place and loops back to `execute` (bounded by `AUTOFIX_MAX_RETRIES`). |
 | `learn_skills` | `nodes/learn_skills.py` | If a patched retry passed, records the applied fix(es) into the skill store (`agents/skills/store.py`) for reuse in future runs. No-op otherwise. |
+| `heal_pr` | `nodes/heal_pr.py` | When `ENABLE_HEAL_PR=true` and a patched retry passed: opens a draft PR with the confirmed repair via the GitHub API. Never fails the run. |
 | `report` | `nodes/report.py` | Renders `reports/qa-summary.html` (Jinja2), optional PDF via headless Chromium, optional LLM plain-English summary. |
 | `notify` | `nodes/notify.py` | Delivers to every configured channel: GitHub PR comment, Slack, Teams, email. |
 

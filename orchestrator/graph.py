@@ -20,6 +20,7 @@ from orchestrator.nodes.execute import execute_tests
 from orchestrator.nodes.fetch import fetch_requirements
 from orchestrator.nodes.gap_analyze import gap_analyze
 from orchestrator.nodes.generate import generate_tests
+from orchestrator.nodes.heal_pr import heal_pr_node
 from orchestrator.nodes.learn_skills import learn_skills_node
 from orchestrator.nodes.log_analyze import log_analyze
 from orchestrator.nodes.merge_results import merge_results
@@ -126,6 +127,7 @@ def build_graph() -> StateGraph:
     _add_node(graph, "autofix", _traced("autofix", autofix_node))
     _add_node(graph, "apply_autofix", _traced("apply_autofix", apply_autofix_node))
     _add_node(graph, "learn_skills", _traced("learn_skills", learn_skills_node))
+    _add_node(graph, "heal_pr", _traced("heal_pr", heal_pr_node))
     _add_node(graph, "report", _traced("report", generate_report))
     _add_node(graph, "notify", _traced("notify", notify_channels))
 
@@ -165,7 +167,8 @@ def build_graph() -> StateGraph:
         route_after_apply_autofix,
         {"execute": "execute", "report": "learn_skills"},
     )
-    graph.add_edge("learn_skills", "report")
+    graph.add_edge("learn_skills", "heal_pr")
+    graph.add_edge("heal_pr", "report")
     graph.add_edge("report", "notify")
     graph.add_edge("notify", END)
 

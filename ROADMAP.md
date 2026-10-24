@@ -22,7 +22,9 @@ does not grow `MissionControlStore` / `PostgresStore`'s public surface.
   with on-disk video/trace presence and a classification.
 - CLI: `argus intel health|select|quarantine-*`. Job kind `select_tests`.
 
-**Still named rather than silently skipped:** in-run locator healing, heal-PRs,
+**Heal-PRs — done** (`ENABLE_HEAL_PR`: a confirmed autofix repair opens a draft PR).
+
+**Still named rather than silently skipped:** in-run locator healing,
 Playwright Healer/Planner adapters, session-replay coverage clustering,
 concurrent dashboard jobs, Watchfloor-lite multi-target switcher.
 

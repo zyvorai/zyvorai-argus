@@ -124,8 +124,22 @@ Consumed by: `orchestrator/nodes/analyze.py`, `orchestrator/nodes/report.py`, `a
 | `ENABLE_AUTOFIX_APPLY` | `false` | Actually patch spec files and re-run failed tests |
 | `AUTOFIX_MAX_RETRIES` | `2` | Max apply→re-execute loops per run |
 | `SKILLS_PATH` | `.zyvor-argus/skills.json` | Skill store — confirmed autofix repairs are recorded here and reused on future runs before falling back to an LLM suggestion |
+| `ENABLE_HEAL_PR` | `false` | When a patched spec re-runs green, open a **draft** pull request with the repair (see below) |
+| `ARGUS_HEAL_PR_REPO` | _(auto)_ | `owner/name` to open the PR in. Falls back to `GITHUB_REPOSITORY`, then the `origin` remote |
+| `ARGUS_HEAL_PR_BASE` | _(default branch)_ | Branch the PR targets |
 
-Consumed by: `orchestrator/graph.py`, `orchestrator/nodes/autofix.py`, `orchestrator/nodes/apply_autofix.py`, `orchestrator/nodes/learn_skills.py`, `agents/skills/store.py`.
+**Heal-PRs.** With `ENABLE_AUTOFIX_APPLY` and `ENABLE_HEAL_PR` both on, a repair that made the failed tests pass
+is proposed back to the repository instead of living only in the runner's working tree. Argus creates the branch
+`argus/heal-<run id>-<hash>` and commits the patched specs through the GitHub API (nothing is checked out or pushed
+from your clone), then opens a draft PR whose table lists each test, old and new locator, and Argus's reason.
+Only files that already exist on the base branch and really differ are committed, so patched files under the
+git-ignored `tests/generated/` are skipped. The token (`GITHUB_TOKEN` or `gh auth`) needs write access to contents
+and pull requests; use a fine-grained token limited to the one repository. A failure to open the PR never fails the
+run: it is recorded in the run's `metadata["heal_pr_error"]` and in the audit log (`heal_pr.create`), and the PR
+URL in `metadata["heal_pr_url"]`. Selectors are swapped by text match (first occurrence), which is why the PR is
+a draft: a human confirms the new locator targets the same element.
+
+Consumed by: `orchestrator/graph.py`, `orchestrator/nodes/autofix.py`, `orchestrator/nodes/apply_autofix.py`, `orchestrator/nodes/learn_skills.py`, `orchestrator/nodes/heal_pr.py`, `agents/autofix/heal_pr.py`, `agents/skills/store.py`.
 
 ---
 

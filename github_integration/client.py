@@ -9,7 +9,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from github import Github
+from github import Github, GithubException
 from github.PullRequest import PullRequest
 
 
@@ -330,6 +330,51 @@ class GitHubClient:
         repo = self._repo(repo_full_name)
         pr: PullRequest = repo.get_pull(pr_number)
         pr.create_issue_comment(body)
+
+    def create_draft_pr(
+        self,
+        repo_full_name: str,
+        *,
+        branch: str,
+        files: dict[str, str],
+        title: str,
+        body: str,
+        commit_message: str,
+        base: str | None = None,
+    ) -> dict:
+        """Open a **draft** PR that changes existing repo files, via the REST API.
+
+        Nothing is checked out or pushed from the local clone, so the working
+        tree is never touched. Only files that already exist on the base branch
+        and whose content really differs are committed; the rest are reported in
+        ``skipped``. Raises ``RuntimeError`` when nothing would change.
+        """
+        repo = self._repo(repo_full_name)
+        base_branch = base or repo.default_branch
+        base_sha = repo.get_branch(base_branch).commit.sha
+
+        changes: list[tuple[str, str, str]] = []  # (path, blob sha on base, new text)
+        skipped: dict[str, str] = {}
+        for path, text in files.items():
+            try:
+                current = repo.get_contents(path, ref=base_branch)
+            except GithubException as exc:
+                skipped[path] = "not in the repository" if exc.status == 404 else f"HTTP {exc.status}"
+                continue
+            if isinstance(current, list):
+                skipped[path] = "is a directory"
+            elif current.decoded_content.decode("utf-8", "replace") == text:
+                skipped[path] = "already matches the base branch"
+            else:
+                changes.append((path, current.sha, text))
+        if not changes:
+            raise RuntimeError(f"no file would change: {skipped}")
+
+        repo.create_git_ref(ref=f"refs/heads/{branch}", sha=base_sha)
+        for path, blob_sha, text in changes:
+            repo.update_file(path, commit_message, text, blob_sha, branch=branch)
+        pr = repo.create_pull(title=title, body=body, head=branch, base=base_branch, draft=True)
+        return {"url": pr.html_url, "number": pr.number, "changed": [c[0] for c in changes], "skipped": skipped}
 
     def get_pr_head_sha(self, repo_full_name: str, pr_number: int) -> str:
         """The PR's current head commit SHA — for setting a commit status."""
