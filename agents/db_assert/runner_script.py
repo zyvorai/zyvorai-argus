@@ -19,7 +19,12 @@ Reads from the environment: ZYVOR_DB_ENGINE (postgres|mysql|sqlite),
 ZYVOR_DB_SECRET (the resolved connection string -- a DSN for postgres/mysql,
 a filesystem path or ':memory:' for sqlite), ZYVOR_DB_QUERY,
 ZYVOR_DB_QUERY_PARAMS (JSON list), ZYVOR_DB_ASSERTION (JSON object),
-ZYVOR_DB_TIMEOUT_S. Prints the same 'VERIFIED: true/false - reason' line
+ZYVOR_DB_TIMEOUT_S. Setting ZYVOR_DB_CHECKS (a JSON list of
+{name, query, query_params, assertion}) switches to suite mode, used by
+db_migration_check: each check runs in turn, one 'CHECK: {json}' line is
+printed per check (with a row count, column names and a digest of the
+result, never the rows themselves), and the VERIFIED line summarises the
+suite. Prints the same 'VERIFIED: true/false - reason' line
 every other sandboxed verification kind prints (parsed by
 orchestrator/dashboard/jobs.py::_parse_verified_output), plus a
 'ROW_COUNT: N' line.
@@ -27,6 +32,7 @@ orchestrator/dashboard/jobs.py::_parse_verified_output), plus a
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -133,11 +139,47 @@ def _evaluate_assertion(assertion: dict, rows: list, columns: list) -> tuple[boo
     return False, f"unsupported assertion mode: {mode!r}"
 
 
+def _run_suite(engine: str, secret: str, checks: list, timeout_s: int) -> int:
+    failed = 0
+    for check in checks:
+        name = str(check.get("name", ""))
+        entry = {"name": name, "ok": False, "reason": "", "rows": None, "columns": [], "digest": ""}
+        try:
+            rows, columns = _run_query(engine, secret, check.get("query", ""), check.get("query_params") or [], timeout_s)
+            entry["rows"] = len(rows)
+            entry["columns"] = list(columns)
+            entry["digest"] = hashlib.sha256(
+                json.dumps([list(r) for r in rows], default=str, sort_keys=True).encode()
+            ).hexdigest()
+            assertion = check.get("assertion")
+            if assertion:
+                entry["ok"], entry["reason"] = _evaluate_assertion(assertion, rows, columns)
+            else:
+                entry["ok"], entry["reason"] = True, "no assertion (snapshot only)"
+        except Exception as exc:
+            entry["reason"] = f"check failed: {exc}"
+        if not entry["ok"]:
+            failed += 1
+        print("CHECK: " + json.dumps(entry))
+    total = len(checks)
+    print(f"VERIFIED: {'true' if not failed else 'false'} - {total - failed}/{total} checks passed")
+    return 0
+
+
 def main() -> int:
     engine = os.environ.get("ZYVOR_DB_ENGINE", "")
     secret = os.environ.get("ZYVOR_DB_SECRET", "")
     query = os.environ.get("ZYVOR_DB_QUERY", "")
     timeout_s = int(os.environ.get("ZYVOR_DB_TIMEOUT_S", "30"))
+
+    checks_raw = os.environ.get("ZYVOR_DB_CHECKS")
+    if checks_raw:
+        try:
+            checks = json.loads(checks_raw)
+        except json.JSONDecodeError as exc:
+            print(f"VERIFIED: false - malformed checks JSON: {exc}")
+            return 0
+        return _run_suite(engine, secret, checks, timeout_s)
 
     try:
         query_params = json.loads(os.environ.get("ZYVOR_DB_QUERY_PARAMS", "[]"))

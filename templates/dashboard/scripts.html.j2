@@ -75,7 +75,7 @@ const PANEL_FOR_KIND = {
   api_contract: "api", realtime: "api", auth_test: "api",
   misconfig_scan: "security", cve_lookup: "security", llm_redteam: "security",
   exploit_poc: "security", attack_chain: "security", host_pentest: "security", cloud_pentest: "security",
-  db_assert: "security", chaos_inject: "security", chaos_webhook: "security",
+  db_assert: "security", db_migration_check: "security", chaos_inject: "security", chaos_webhook: "security",
 };
 const PANEL_SUB = {
   overview: "Cluster health and QA runs", ask: "Ask about your tests, runs and requirements",
@@ -1921,7 +1921,7 @@ const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "ge
   har_replay: "HAR record/replay", import_codegen: "import codegen",
   misconfig_scan: "misconfig scan", cve_lookup: "CVE lookup", sca_scan: "SCA scan", llm_redteam: "LLM red-team",
   exploit_poc: "exploit PoC", attack_chain: "attack chain", host_pentest: "host pentest", cloud_pentest: "cloud pentest",
-  db_assert: "DB assert", chaos_inject: "chaos inject", chaos_webhook: "chaos webhook",
+  db_assert: "DB assert", db_migration_check: "DB migration check", chaos_inject: "chaos inject", chaos_webhook: "chaos webhook",
   port_scan: "port scan", tls_cipher_scan: "TLS cipher scan", dast_scan: "DAST scan",
   injection_scan: "injection scan", csrf_probe: "CSRF probe", ssrf_probe: "SSRF probe",
   auth_attack_scan: "auth attack scan", idor_scan: "IDOR scan" };

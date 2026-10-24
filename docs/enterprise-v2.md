@@ -96,7 +96,7 @@ The live-crawl agent (`playwright/scripts/crawl-site.mjs`) has its own, narrower
 
 Elevated job kinds do deeper, potentially-invasive security testing —
 `misconfig_scan`, `cve_lookup`, `sca_scan`, `llm_redteam`, `port_scan`,
-`tls_cipher_scan`, `db_assert`, `exploit_poc`, `attack_chain`,
+`tls_cipher_scan`, `db_assert`, `db_migration_check`, `exploit_poc`, `attack_chain`,
 `host_pentest`, `cloud_pentest`, `chaos_inject`, `chaos_webhook`, plus the
 DAST family (`dast_scan`, `injection_scan`, `csrf_probe`, `ssrf_probe`,
 `auth_attack_scan`, `idor_scan`) — and are refused (`400`) unless
