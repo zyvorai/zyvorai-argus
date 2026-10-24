@@ -235,6 +235,12 @@ pub fn dashboard_url(state: &ServerState) -> Result<Option<String>, String> {
     }
 }
 
+/// `scheme://host:port` of the running (or remote) Mission Control, for API polling.
+/// Same contract as `dashboard_url`: `Ok(None)` = still starting, `Err` = failed.
+pub fn origin(state: &ServerState) -> Result<Option<String>, String> {
+    dashboard_url(state).map(|url| url.and_then(|u| crate::monitor_logic::origin_of(&u)))
+}
+
 /// Kill the child, if running — called on window close.
 pub fn shutdown(state: &ServerState) {
     if let Ok(mut guard) = state.handle.lock() {
