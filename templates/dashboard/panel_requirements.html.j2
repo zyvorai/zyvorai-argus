@@ -3,39 +3,39 @@
     <h1>Requirements</h1>
     <p>Every requirement the pipeline has ingested — source, quality score, and version history. Read-only: written by the pipeline's own <code>fetch → parse → evaluate_quality</code> chain.</p>
   </div>
-  <h2 style="display:flex;align-items:center;gap:10px">Requirements
-    <span id="req-count" class="d" style="font-weight:400"></span>
-    <button class="dl-btn" id="req-refresh" style="margin-left:auto">↻</button>
+  <h2>Requirements
+    <span id="req-count" class="d fw-400"></span>
+    <button class="dl-btn ml-auto" id="req-refresh">↻</button>
   </h2>
-  <div class="glass card" style="margin-bottom:14px">
+  <div class="glass card mb-14">
     <div id="requirements"><span class="d">No requirements yet — run a pipeline against a <code>github</code>, <code>document</code>, <code>email</code>, <code>transcript</code>, or <code>jira</code> source and they'll collect here.</span></div>
   </div>
   <div class="glass card" id="req-detail-card" style="display:none">
-    <div class="k" style="display:flex;align-items:center;gap:10px">
+    <div class="k flex-row">
       <span id="req-detail-title">—</span>
-      <button class="dl-btn" id="req-detail-close" style="margin-left:auto">✕ close</button>
+      <button class="dl-btn ml-auto" id="req-detail-close">✕ close</button>
     </div>
-    <div id="req-detail-body" style="margin-top:10px"></div>
+    <div id="req-detail-body" class="mt-10"></div>
   </div>
 
   <h2>Impact — shared data models &amp; flows</h2>
-  <p class="d" style="margin-top:-6px">Requirements grouped by the data models and business flow named in each requirement's latest version. Model edges link entities that co-occur on the same requirement; typed dependencies show explicit Order → Payment edges. Click a requirement id to open its detail above.</p>
+  <p class="d mt-n6">Requirements grouped by the data models and business flow named in each requirement's latest version. Model edges link entities that co-occur on the same requirement; typed dependencies show explicit Order → Payment edges. Click a requirement id to open its detail above.</p>
   <div class="qa">
     <div class="glass card">
-      <div class="k" style="margin-bottom:8px">By data model</div>
+      <div class="k mb-8">By data model</div>
       <div class="feed" id="req-data-models"><span class="d">No shared data models yet.</span></div>
     </div>
     <div class="glass card">
-      <div class="k" style="margin-bottom:8px">Model edges</div>
+      <div class="k mb-8">Model edges</div>
       <div class="feed" id="req-model-edges"><span class="d">No co-occurrence edges yet.</span></div>
     </div>
-    <div class="glass card" style="grid-column: span 2">
-      <div class="k" style="margin-bottom:8px">Typed dependencies</div>
+    <div class="glass card span-2">
+      <div class="k mb-8">Typed dependencies</div>
       <div class="feed" id="req-model-deps"><span class="d">No typed Order → Payment edges yet.</span></div>
-      <svg id="req-dep-canvas" viewBox="0 0 640 220" width="100%" height="220" style="margin-top:12px;display:none" aria-label="Dependency graph"></svg>
+      <svg id="req-dep-canvas" viewBox="0 0 640 220" width="100%" height="220" aria-label="Dependency graph" style="display:none" class="mt-12"></svg>
     </div>
-    <div class="glass card" style="grid-column: span 2">
-      <div class="k" style="margin-bottom:8px">By flow</div>
+    <div class="glass card span-2">
+      <div class="k mb-8">By flow</div>
       <div class="feed" id="req-flows"><span class="d">No flows tagged yet.</span></div>
     </div>
   </div>

@@ -5,8 +5,8 @@
   </div>
   <h2>Schedules — run on a loop</h2>
   <div class="glass card">
-    <div class="act-row" style="margin-bottom:10px">
-      <select class="inp" id="sc-kind">
+    <div class="act-row mb-10">
+      <select aria-label="Job kind" class="inp" id="sc-kind">
         <option value="smoke">smoke tests</option>
         <option value="audit">site audit (zyvor.dev)</option>
         <option value="ping">uptime ping</option>
@@ -17,38 +17,37 @@
         <option value="realtime">live data (from 📡 card)</option>
         <option value="vitals">web vitals (from 📊 card)</option>
       </select>
-      <span class="d">every</span>
-      <select class="inp" id="sc-interval">
+      <label class="d" for="sc-interval">every</label><select class="inp" id="sc-interval">
         <option value="300">5 min</option>
         <option value="900">15 min</option>
         <option value="3600">1 hour</option>
         <option value="21600">6 hours</option>
       </select>
-      <input class="inp grow" id="sc-arg" placeholder="URL / host (for audit / ping / TLS)">
+      <input aria-label="URL or host" class="inp grow" id="sc-arg" placeholder="URL / host (for audit / ping / TLS)">
       <button class="dl-btn" id="sc-add">＋ Schedule</button>
     </div>
     <div class="feed" id="schedules"><span class="d">No schedules — add one to monitor on a loop.</span></div>
   </div>
 
   
-  <h2 style="display:flex;align-items:center;gap:10px">🐞 Findings — what's broken
-    <span id="find-counts" class="d" style="font-weight:400"></span>
-    <a class="dl-btn" href="/api/dashboard/findings?limit=500" download="findings.json" style="text-decoration:none;margin-left:auto">⬇ export</a>
+  <h2>🐞 Findings — what's broken
+    <span id="find-counts" class="d fw-400"></span>
+    <a class="dl-btn nodeco ml-auto" href="/api/dashboard/findings?limit=500" download="findings.json">⬇ export</a>
     <button class="dl-btn" id="find-clear">clear</button>
   </h2>
-  <div class="glass card" style="margin-bottom:14px">
+  <div class="glass card mb-14">
     <div id="findings"><span class="d">No findings yet — run API-contract, auth, live-data, vitals or audit and issues will collect here.</span></div>
   </div>
 
   
-  <h2 style="display:flex;align-items:center;gap:10px">QA Runs
-    <a class="dl-btn" href="/api/dashboard/runs?limit=200" download="qa-runs.json" style="text-decoration:none">⬇ export</a>
+  <h2>QA Runs
+    <a class="dl-btn nodeco" href="/api/dashboard/runs?limit=200" download="qa-runs.json">⬇ export</a>
     <button class="dl-btn" id="videos-toggle">🎬 videos</button>
-    <a class="dl-btn" href="/api/dashboard/videos.zip" style="text-decoration:none" title="download every recorded video">⬇ all videos (zip)</a>
+    <a class="dl-btn nodeco" href="/api/dashboard/videos.zip" title="download every recorded video">⬇ all videos (zip)</a>
   </h2>
-  <div class="glass card" id="videos-panel" style="display:none;margin-bottom:14px">
-    <div class="k" style="margin-bottom:8px">Recorded test videos</div>
-    <div class="feed" id="videos-list" style="max-height:260px"><span class="d">No videos yet — run smoke, crawl, or an executed NL test.</span></div>
+  <div class="glass card mb-14" id="videos-panel" style="display:none">
+    <div class="k mb-8">Recorded test videos</div>
+    <div class="feed mh-260" id="videos-list"><span class="d">No videos yet — run smoke, crawl, or an executed NL test.</span></div>
   </div>
   <div class="qa">
     <div class="glass card">
@@ -58,26 +57,26 @@
       </div>
       <div class="v" id="latest-run">—</div>
       <div class="d" id="latest-run-detail"></div>
-      <div class="spark-wrap" style="margin-top:12px">
+      <div class="spark-wrap mt-12">
         <svg id="spark" width="100%" height="46" viewBox="0 0 268 46" preserveAspectRatio="none" role="img" aria-label="Pass rate, last 30 runs"></svg>
         <div class="spark-tip" id="spark-tip"></div>
       </div>
-      <div class="k" style="margin-top:6px">Pass rate, last 30 runs</div>
+      <div class="k mt-6">Pass rate, last 30 runs</div>
     </div>
     <div class="glass card">
       <table class="runs-table" id="runs-table" aria-label="Recent QA runs"><tbody></tbody></table>
-      <div class="empty" id="runs-empty" style="border:none;background:none">No run history yet — run <code>argus test run</code> once.</div>
+      <div class="empty plain" id="runs-empty">No run history yet — run <code>argus test run</code> once.</div>
     </div>
     <div class="glass card">
-      <div class="k" style="margin-bottom:8px">Activity</div>
+      <div class="k mb-8">Activity</div>
       <div class="feed" id="feed"><span class="d">No activity yet this session.</span></div>
     </div>
   </div>
 
   
   <h2>Compare runs</h2>
-  <div class="glass card" id="cmp-card" style="margin-bottom:14px">
-    <div class="act-row" style="margin-bottom:10px">
+  <div class="glass card mb-14" id="cmp-card">
+    <div class="act-row mb-10">
       <label class="d" for="cmp-a">Baseline</label>
       <select class="inp" id="cmp-a" aria-label="Baseline run"></select>
       <label class="d" for="cmp-b">Candidate</label>
@@ -86,9 +85,9 @@
     <div id="cmp-out" aria-live="polite"><span class="d">Run at least two QA runs to compare them.</span></div>
   </div>
 
-  <h2 style="display:flex;align-items:center;gap:10px">Test health <button class="dl-btn" id="th-refresh">↻</button></h2>
+  <h2>Test health <button class="dl-btn" id="th-refresh">↻</button></h2>
   <div class="glass card">
-    <div class="feed" id="test-health" style="max-height:280px"><span class="d">No test history yet — run tests to build trends.</span></div>
+    <div class="feed mh-280" id="test-health"><span class="d">No test history yet — run tests to build trends.</span></div>
   </div>
 
   

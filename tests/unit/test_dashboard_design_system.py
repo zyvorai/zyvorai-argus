@@ -136,3 +136,49 @@ def test_bare_source_and_device_selects_carry_a_visible_caption():
     html = "".join(_panel(n) for n in PANELS_A)
     assert html.count('class="select-field"') >= 9
     assert '<label class="select-field"><span>Source</span><select class="inp" id="run-source">' in html
+
+
+PANELS_B = ("api", "requirements", "operations", "security")
+
+
+def test_panels_b_keep_only_js_toggled_inline_styles():
+    for name in PANELS_B:
+        for style in re.findall(r'style="([^"]*)"', _panel(name)):
+            assert style.replace(" ", "").startswith("display:none"), f"{name}: inline style {style!r}"
+
+
+def test_panels_b_name_every_form_control():
+    control = re.compile(r"<(input|select|textarea)\b([^>]*)>")
+    for name in PANELS_B:
+        html = _panel(name)
+        for m in control.finditer(html):
+            attrs = m.group(2)
+            if re.search(r'type="(checkbox|radio|hidden)"', attrs):
+                continue
+            before = html[: m.start()]
+            wrapped = before.rfind("<label") > before.rfind("</label>")
+            named = re.search(r'\b(aria-label|aria-labelledby|title)="', attrs)
+            idm = re.search(r'\bid="([^"]+)"', attrs)
+            has_for = idm and re.search(r'<label[^>]*\bfor="%s"' % re.escape(idm.group(1)), html)
+            assert wrapped or named or has_for, f"{name}: unlabeled control {attrs.strip()[:60]}"
+
+
+def test_no_element_id_is_used_twice_across_panels():
+    """Two panels once shared `au-url`/`au-insecure` and `cmp-a`/`cmp-b`; getElementById then
+    returned the wrong panel's field (the auth test read the site-audit URL, and 'Compare runs'
+    wrote its options into a text box)."""
+    import collections
+
+    html = _dashboard()
+    static = re.sub(r"<script>.*?</script>", "", html, flags=re.S)
+    counts = collections.Counter(re.findall(r'\bid="([^"]+)"', static))
+    assert [i for i, c in counts.items() if c > 1] == []
+
+
+def test_auth_and_visual_compare_read_their_own_fields():
+    js = (TEMPLATES / "dashboard" / "scripts.html.j2").read_text()
+    assert '$("auth-url")' in js and '$("auth-insecure")' in js
+    assert '$("vcmp-a")' in js and '$("vcmp-b")' in js
+    html = _dashboard()
+    assert 'id="auth-url"' in html and 'id="vcmp-a"' in html
+    assert 'id="cmp-a"' in html and 'aria-label="Baseline run"' in html  # the Compare-runs select keeps its id

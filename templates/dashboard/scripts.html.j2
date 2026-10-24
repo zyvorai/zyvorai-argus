@@ -1546,7 +1546,7 @@ function jobParams(kind) {
     viewports: Array.from(document.querySelectorAll("#sh-vps input:checked")).map((c) => c.value).filter((v) => v !== "on"),
     full_page: $("sh-full").checked,
   };
-  if (kind === "compare") return { url_a: $("cmp-a").value.trim(), url_b: $("cmp-b").value.trim(), insecure: $("cmp-insecure").checked };
+  if (kind === "compare") return { url_a: $("vcmp-a").value.trim(), url_b: $("vcmp-b").value.trim(), insecure: $("cmp-insecure").checked };
   if (kind === "ping") return { urls: $("pg-urls").value };
   if (kind === "loadtest") return { url: $("lt-url").value.trim(), requests: parseInt($("lt-n").value, 10) || 100, concurrency: parseInt($("lt-c").value, 10) || 10 };
   if (kind === "tls") return { host: $("tls-host").value.trim() };
@@ -1634,7 +1634,7 @@ function jobParams(kind) {
     insecure: $("rt-insecure").checked,
   };
   if (kind === "auth_test") return {
-    url: $("au-url").value.trim(),
+    url: $("auth-url").value.trim(),
     protected: $("au-protected").value.trim() || "/",
     login_url: $("au-login").value.trim(),
     api_login: $("au-api").value.trim(),
@@ -1642,7 +1642,7 @@ function jobParams(kind) {
     username: $("au-user").value.trim(),
     password: $("au-pass").value,
     save_session: $("au-save").checked,
-    insecure: $("au-insecure").checked,
+    insecure: $("auth-insecure").checked,
   };
   if (kind === "har_replay") return {
     url: $("har-url").value.trim(),

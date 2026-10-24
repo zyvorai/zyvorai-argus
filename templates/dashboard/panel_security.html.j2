@@ -4,67 +4,67 @@
     <p>Authorized engagements, misconfig scans, red-team, and pentesting.</p>
   </div>
   <div class="acts">
-<div class="glass card act" id="action-engagements" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-engagements">
       <div class="act-title">🔏 Security engagements — authorize misconfig/CVE/LLM red-team testing</div>
-      <div class="d" style="margin-bottom:8px">Admin-issued, target-scoped authorization required before running the three cards below — see <code>docs/enterprise-v2.md</code>.</div>
+      <div class="d mb-8">Admin-issued, target-scoped authorization required before running the three cards below — see <code>docs/enterprise-v2.md</code>.</div>
       <div class="act-row">
-        <input class="inp grow" id="eng-pattern" placeholder="target pattern, e.g. *.example.com or *">
-        <input class="inp grow" id="eng-scope" placeholder="scope statement — why is this authorized?">
-        <button class="dl-btn" id="eng-create" style="margin-left:auto">🔏 Create engagement</button>
+        <input aria-label="Target pattern" class="inp grow" id="eng-pattern" placeholder="target pattern, e.g. *.example.com or *">
+        <input aria-label="Scope statement" class="inp grow" id="eng-scope" placeholder="scope statement — why is this authorized?">
+        <button class="dl-btn ml-auto" id="eng-create">🔏 Create engagement</button>
       </div>
-      <div id="engagements" style="margin-top:10px"><span class="d">No engagements yet — create one above to unlock the cards below.</span></div>
+      <div id="engagements" class="mt-10"><span class="d">No engagements yet — create one above to unlock the cards below.</span></div>
     </div>
     
-<div class="glass card act" id="action-misconfig" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-misconfig">
       <div class="act-title">🕵️ Misconfig scan — tech fingerprint, exposed paths, header grading, DNS hygiene</div>
       <div class="act-row">
-        <input class="inp grow" id="ms-url" placeholder="https://your-app.example.com">
-        <input class="inp" id="ms-paths" type="number" value="60" min="1" max="300" style="width:90px" title="max paths">
+        <input aria-label="URL" class="inp grow" id="ms-url" placeholder="https://your-app.example.com">
+        <input class="inp w-90" id="ms-paths" type="number" value="60" min="1" max="300" title="max paths">
         <label class="chk"><input type="checkbox" id="ms-insecure"> self-signed TLS</label>
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="ms-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="misconfig_scan" style="margin-left:auto">🕵️ Scan</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="ms-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="misconfig_scan">🕵️ Scan</button>
       </div>
     </div>
     
-<div class="glass card act" id="action-cve" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-cve">
       <div class="act-title">🧬 CVE lookup — read-only, fingerprints versions and checks OSV.dev (no PoC)</div>
       <div class="act-row">
-        <input class="inp grow" id="cve-url" placeholder="https://your-app.example.com">
+        <input aria-label="URL" class="inp grow" id="cve-url" placeholder="https://your-app.example.com">
         <label class="chk"><input type="checkbox" id="cve-insecure"> self-signed TLS</label>
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="cve-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="cve_lookup" style="margin-left:auto">🧬 Lookup</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="cve-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="cve_lookup">🧬 Lookup</button>
       </div>
     </div>
 
-<div class="glass card act" id="action-sca" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-sca">
       <div class="act-title">📦 SCA scan — client-side license fingerprinting and/or a local-checkout dependency audit</div>
-      <div class="d" style="margin-bottom:8px">Two independent modes: fill the URL for black-box client-side library/license fingerprinting (needs an engagement below), and/or a local checkout path for a real <code>pip-audit</code>/<code>npm audit</code> run (operator-local filesystem, no engagement needed — nothing remote is being touched).</div>
+      <div class="d mb-8">Two independent modes: fill the URL for black-box client-side library/license fingerprinting (needs an engagement below), and/or a local checkout path for a real <code>pip-audit</code>/<code>npm audit</code> run (operator-local filesystem, no engagement needed — nothing remote is being touched).</div>
       <div class="act-row">
-        <input class="inp grow" id="sca-url" placeholder="https://your-app.example.com (black-box mode, optional)">
-        <input class="inp grow" id="sca-checkout" placeholder="/path/to/local/checkout (local-checkout mode, optional)">
+        <input aria-label="URL" class="inp grow" id="sca-url" placeholder="https://your-app.example.com (black-box mode, optional)">
+        <input aria-label="Local checkout path" class="inp grow" id="sca-checkout" placeholder="/path/to/local/checkout (local-checkout mode, optional)">
       </div>
       <div class="act-row">
         <label class="chk"><input type="checkbox" id="sca-insecure"> self-signed TLS</label>
-        <select class="inp grow eng-select" id="sca-eng"><option value="">— select an authorized engagement — (only needed with a URL)</option></select>
-        <button class="run-btn act-btn" data-kind="sca_scan" style="margin-left:auto">📦 Scan</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="sca-eng"><option value="">— select an authorized engagement — (only needed with a URL)</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="sca_scan">📦 Scan</button>
       </div>
     </div>
 
-<div class="glass card act" id="action-llm-redteam" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-llm-redteam">
       <div class="act-title">🎭 LLM red-team — attacker/judge battery against Ask Zyra</div>
       <div class="act-row">
-        <select class="inp" id="lr-target">
+        <select aria-label="Target" class="inp" id="lr-target">
           <option value="dashboard_ask">Ask Zyra (in-process)</option>
           <option value="v1_qa">external /v1/qa endpoint</option>
         </select>
-        <input class="inp grow" id="lr-baseurl" placeholder="base URL (target=external only)">
-        <input class="inp grow" id="lr-apikey" type="password" placeholder="API key (target=external only)" autocomplete="off">
+        <input aria-label="Base URL" class="inp grow" id="lr-baseurl" placeholder="base URL (target=external only)">
+        <input aria-label="API key" class="inp grow" id="lr-apikey" type="password" placeholder="API key (target=external only)" autocomplete="off">
       </div>
-      <div class="act-row" id="lr-categories" style="gap:10px;flex-wrap:wrap">
+      <div class="act-row gap-10" id="lr-categories">
         <label class="chk"><input type="checkbox" value="prompt_injection" checked> prompt injection</label>
         <label class="chk"><input type="checkbox" value="system_prompt_exfiltration" checked> system-prompt leak</label>
         <label class="chk"><input type="checkbox" value="excessive_agency" checked> excessive agency</label>
@@ -72,202 +72,202 @@
         <label class="chk"><input type="checkbox" value="pii_secret_exfiltration" checked> PII/secret leak</label>
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="lr-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="llm_redteam" style="margin-left:auto">🎭 Run battery</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="lr-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="llm_redteam">🎭 Run battery</button>
       </div>
     </div>
     
-<div class="glass card act" id="action-exploit" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-exploit">
       <div class="act-title">💣 Exploit PoC — LLM-generated, sandboxed, non-destructive verification</div>
-      <div class="d" style="margin-bottom:8px">Requires an <b>exploit</b>-tier engagement and <code>ZYVOR_EXPLOIT_EXECUTION_ENABLED=true</code> on the server — see <code>docs/enterprise-v2.md</code>.</div>
+      <div class="d mb-8">Requires an <b>exploit</b>-tier engagement and <code>ZYVOR_EXPLOIT_EXECUTION_ENABLED=true</code> on the server — see <code>docs/enterprise-v2.md</code>.</div>
       <div class="act-row">
-        <input class="inp grow" id="ep-url" placeholder="https://your-app.example.com">
-        <input class="inp" id="ep-timeout" type="number" value="60" min="5" max="300" style="width:90px" title="sandbox timeout (s)">
+        <input aria-label="URL" class="inp grow" id="ep-url" placeholder="https://your-app.example.com">
+        <input class="inp w-90" id="ep-timeout" type="number" value="60" min="5" max="300" title="sandbox timeout (s)">
       </div>
-      <div class="act-row"><textarea class="inp grow" id="ep-finding" rows="2" placeholder="describe what to verify, e.g. 'SQL injection in ?id= reflects unescaped input'"></textarea></div>
+      <div class="act-row"><textarea aria-label="Finding to verify" class="inp grow" id="ep-finding" rows="2" placeholder="describe what to verify, e.g. 'SQL injection in ?id= reflects unescaped input'"></textarea></div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="ep-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="exploit_poc" style="margin-left:auto">💣 Generate &amp; verify</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="ep-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="exploit_poc">💣 Generate &amp; verify</button>
       </div>
     </div>
     
-<div class="glass card act" id="action-attack-chain" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-attack-chain">
       <div class="act-title">⛓ Attack chain — plan-and-verify a multi-step escalation</div>
-      <div class="d" style="margin-bottom:8px">Same gates as Exploit PoC — this is Exploit PoC run in a loop with an LLM planner (max 5 steps, stops the moment a step fails to verify).</div>
+      <div class="d mb-8">Same gates as Exploit PoC — this is Exploit PoC run in a loop with an LLM planner (max 5 steps, stops the moment a step fails to verify).</div>
       <div class="act-row">
-        <input class="inp grow" id="ac-url" placeholder="https://your-app.example.com">
-        <input class="inp" id="ac-steps" type="number" value="5" min="1" max="5" style="width:80px" title="max steps">
-        <input class="inp" id="ac-timeout" type="number" value="60" min="5" max="300" style="width:90px" title="sandbox timeout per step (s)">
+        <input aria-label="URL" class="inp grow" id="ac-url" placeholder="https://your-app.example.com">
+        <input class="inp w-80" id="ac-steps" type="number" value="5" min="1" max="5" title="max steps">
+        <input class="inp w-90" id="ac-timeout" type="number" value="60" min="5" max="300" title="sandbox timeout per step (s)">
       </div>
-      <div class="act-row"><input class="inp grow" id="ac-objective" placeholder="escalation goal, e.g. 'escalate SQLi to RCE'"></div>
+      <div class="act-row"><input aria-label="Escalation goal" class="inp grow" id="ac-objective" placeholder="escalation goal, e.g. 'escalate SQLi to RCE'"></div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="ac-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="attack_chain" style="margin-left:auto">⛓ Run chain</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="ac-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="attack_chain">⛓ Run chain</button>
       </div>
     </div>
     
-<div class="glass card act" id="action-host-pentest" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-host-pentest">
       <div class="act-title">🖥 Host pentest — credentialed, sandboxed SSH enumeration</div>
-      <div class="d" style="margin-bottom:8px">Needs a third gate — <code>ZYVOR_CREDENTIALED_PENTEST_ENABLED=true</code> — and <code>ZYVOR_SANDBOX_HOST_IMAGE</code> (paramiko) configured server-side. <b>Creds must reference server-side env vars — the values below are never sent</b>, only the env var <i>names</i> the server already has set.</div>
+      <div class="d mb-8">Needs a third gate — <code>ZYVOR_CREDENTIALED_PENTEST_ENABLED=true</code> — and <code>ZYVOR_SANDBOX_HOST_IMAGE</code> (paramiko) configured server-side. <b>Creds must reference server-side env vars — the values below are never sent</b>, only the env var <i>names</i> the server already has set.</div>
       <div class="act-row">
-        <input class="inp grow" id="hp-host" placeholder="hostname or IP">
-        <input class="inp" id="hp-port" type="number" value="22" min="1" max="65535" style="width:80px" title="SSH port">
-        <input class="inp" id="hp-timeout" type="number" value="60" min="5" max="300" style="width:90px" title="sandbox timeout (s)">
+        <input aria-label="Hostname" class="inp grow" id="hp-host" placeholder="hostname or IP">
+        <input class="inp w-80" id="hp-port" type="number" value="22" min="1" max="65535" title="SSH port">
+        <input class="inp w-90" id="hp-timeout" type="number" value="60" min="5" max="300" title="sandbox timeout (s)">
       </div>
-      <div class="act-row"><textarea class="inp grow" id="hp-finding" rows="2" placeholder="describe what to verify, e.g. 'SSH allows password auth with a weak default credential'"></textarea></div>
-      <div class="act-row" style="gap:10px">
-        <input class="inp" id="hp-user" placeholder="username" style="max-width:180px">
-        <select class="inp" id="hp-authmethod" style="max-width:150px">
+      <div class="act-row"><textarea aria-label="Finding to verify" class="inp grow" id="hp-finding" rows="2" placeholder="describe what to verify, e.g. 'SSH allows password auth with a weak default credential'"></textarea></div>
+      <div class="act-row gap-10">
+        <input aria-label="Username" class="inp mw-180" id="hp-user" placeholder="username">
+        <select aria-label="Auth method" class="inp mw-150" id="hp-authmethod">
           <option value="password">password</option>
           <option value="private_key">private key</option>
         </select>
-        <input class="inp grow" id="hp-secretenv" placeholder="server env var name holding it, e.g. TARGET_SSH_PASSWORD">
+        <input aria-label="Env var holding the secret" class="inp grow" id="hp-secretenv" placeholder="server env var name holding it, e.g. TARGET_SSH_PASSWORD">
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="hp-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="host_pentest" style="margin-left:auto">🖥 Generate &amp; verify</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="hp-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="host_pentest">🖥 Generate &amp; verify</button>
       </div>
     </div>
 
-<div class="glass card act" id="action-cloud-pentest" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-cloud-pentest">
       <div class="act-title">☁️ Cloud pentest — credentialed, sandboxed AWS/GCP/Azure CLI enumeration</div>
-      <div class="d" style="margin-bottom:8px">Needs a third gate — <code>ZYVOR_CREDENTIALED_PENTEST_ENABLED=true</code> — and <code>ZYVOR_SANDBOX_CLOUD_IMAGE</code> (aws/gcloud/az CLIs) configured server-side. <b>Creds must reference server-side env vars — the values below are never sent</b>, only the env var <i>names</i> the server already has set, e.g. <code>{"access_key_id": "AKIA...", "secret_access_key": {"$secret": "env:AWS_SECRET"}}</code>.</div>
+      <div class="d mb-8">Needs a third gate — <code>ZYVOR_CREDENTIALED_PENTEST_ENABLED=true</code> — and <code>ZYVOR_SANDBOX_CLOUD_IMAGE</code> (aws/gcloud/az CLIs) configured server-side. <b>Creds must reference server-side env vars — the values below are never sent</b>, only the env var <i>names</i> the server already has set, e.g. <code>{"access_key_id": "AKIA...", "secret_access_key": {"$secret": "env:AWS_SECRET"}}</code>.</div>
       <div class="act-row">
-        <select class="inp" id="cp-provider" style="max-width:130px">
+        <select aria-label="Cloud provider" class="inp mw-130" id="cp-provider">
           <option value="aws">aws</option>
           <option value="gcp">gcp</option>
           <option value="azure">azure</option>
         </select>
-        <input class="inp grow" id="cp-target" placeholder="account/project identifier, e.g. aws-prod-123456789012">
-        <input class="inp" id="cp-timeout" type="number" value="60" min="5" max="300" style="width:90px" title="sandbox timeout (s)">
+        <input aria-label="Target" class="inp grow" id="cp-target" placeholder="account/project identifier, e.g. aws-prod-123456789012">
+        <input class="inp w-90" id="cp-timeout" type="number" value="60" min="5" max="300" title="sandbox timeout (s)">
       </div>
-      <div class="act-row"><textarea class="inp grow" id="cp-finding" rows="2" placeholder="describe what to verify, e.g. 'S3 bucket policy grants public read access'"></textarea></div>
-      <div class="act-row"><textarea class="inp grow" id="cp-creds" rows="2" placeholder='creds as JSON — non-secret fields inline, secret fields as {"$secret": "env:NAME"}, e.g. {"access_key_id": "AKIA...", "secret_access_key": {"$secret": "env:AWS_SECRET"}}'></textarea></div>
+      <div class="act-row"><textarea aria-label="Finding to verify" class="inp grow" id="cp-finding" rows="2" placeholder="describe what to verify, e.g. 'S3 bucket policy grants public read access'"></textarea></div>
+      <div class="act-row"><textarea aria-label="Credentials ($secret references)" class="inp grow" id="cp-creds" rows="2" placeholder='creds as JSON — non-secret fields inline, secret fields as {"$secret": "env:NAME"}, e.g. {"access_key_id": "AKIA...", "secret_access_key": {"$secret": "env:AWS_SECRET"}}'></textarea></div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="cp-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="cloud_pentest" style="margin-left:auto">☁️ Generate &amp; verify</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="cp-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="cloud_pentest">☁️ Generate &amp; verify</button>
       </div>
     </div>
-    <div class="glass card act" style="grid-column: 1 / -1">
+    <div class="glass card act span-all">
       <div class="act-title">🔭 Port scan — bounded TCP connect on common service ports</div>
-      <div class="d" style="margin-bottom:8px">Needs an <b>active_recon</b> engagement. Caps at 64 ports — not a full-range sweep.</div>
+      <div class="d mb-8">Needs an <b>active_recon</b> engagement. Caps at 64 ports — not a full-range sweep.</div>
       <div class="act-row">
-        <input class="inp grow" id="ps-url" placeholder="https://your-app.example.com or hostname">
-        <input class="inp grow" id="ps-ports" placeholder="ports (optional, comma-separated)">
+        <input aria-label="URL" class="inp grow" id="ps-url" placeholder="https://your-app.example.com or hostname">
+        <input aria-label="Ports" class="inp grow" id="ps-ports" placeholder="ports (optional, comma-separated)">
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="ps-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="port_scan" style="margin-left:auto">🔭 Scan ports</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="ps-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="port_scan">🔭 Scan ports</button>
       </div>
     </div>
-    <div class="glass card act" style="grid-column: 1 / -1">
+    <div class="glass card act span-all">
       <div class="act-title">🔐 TLS cipher scan — protocol + weak-cipher grading</div>
       <div class="act-row">
-        <input class="inp grow" id="tcs-url" placeholder="https://your-app.example.com">
-        <input class="inp" id="tcs-port" type="number" placeholder="443" min="1" max="65535" style="width:90px" title="port">
+        <input aria-label="URL" class="inp grow" id="tcs-url" placeholder="https://your-app.example.com">
+        <input class="inp w-90" id="tcs-port" type="number" placeholder="443" min="1" max="65535" title="port">
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="tcs-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="tls_cipher_scan" style="margin-left:auto">🔐 Grade TLS</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="tcs-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="tls_cipher_scan">🔐 Grade TLS</button>
       </div>
     </div>
-    <div class="glass card act" style="grid-column: 1 / -1">
+    <div class="glass card act span-all">
       <div class="act-title">🎯 DAST scan — headers, injection, CSRF, open-redirect (+ optional nuclei)</div>
-      <div class="d" style="margin-bottom:8px">Requires an <b>exploit</b>-tier engagement and <code>ZYVOR_DAST_SCAN_ENABLED=true</code>. Optional <code>ZYVOR_DAST_NUCLEI_BIN</code> for external templates.</div>
+      <div class="d mb-8">Requires an <b>exploit</b>-tier engagement and <code>ZYVOR_DAST_SCAN_ENABLED=true</code>. Optional <code>ZYVOR_DAST_NUCLEI_BIN</code> for external templates.</div>
       <div class="act-row">
-        <input class="inp grow" id="dast-url" placeholder="https://your-app.example.com">
+        <input aria-label="URL" class="inp grow" id="dast-url" placeholder="https://your-app.example.com">
         <label class="chk"><input type="checkbox" id="dast-insecure"> self-signed TLS</label>
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="dast-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="dast_scan" style="margin-left:auto">🎯 Run DAST</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="dast-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="dast_scan">🎯 Run DAST</button>
       </div>
     </div>
-    <div class="glass card act" style="grid-column: 1 / -1">
+    <div class="glass card act span-all">
       <div class="act-title">💉 Injection scan — SQLi / reflected XSS / path traversal</div>
-      <div class="d" style="margin-bottom:8px">Same DAST opt-in as above.</div>
+      <div class="d mb-8">Same DAST opt-in as above.</div>
       <div class="act-row">
-        <input class="inp grow" id="inj-url" placeholder="https://your-app.example.com/search?q=test">
+        <input aria-label="URL" class="inp grow" id="inj-url" placeholder="https://your-app.example.com/search?q=test">
         <label class="chk"><input type="checkbox" id="inj-insecure"> self-signed TLS</label>
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="inj-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="injection_scan" style="margin-left:auto">💉 Probe</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="inj-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="injection_scan">💉 Probe</button>
       </div>
     </div>
-    <div class="glass card act" style="grid-column: 1 / -1">
+    <div class="glass card act span-all">
       <div class="act-title">🛡 CSRF probe — forms without tokens, cookies without SameSite</div>
       <div class="act-row">
-        <input class="inp grow" id="csrf-url" placeholder="https://your-app.example.com/login">
+        <input aria-label="URL" class="inp grow" id="csrf-url" placeholder="https://your-app.example.com/login">
         <label class="chk"><input type="checkbox" id="csrf-insecure"> self-signed TLS</label>
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="csrf-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="csrf_probe" style="margin-left:auto">🛡 Probe CSRF</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="csrf-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="csrf_probe">🛡 Probe CSRF</button>
       </div>
     </div>
-    <div class="glass card act" style="grid-column: 1 / -1">
+    <div class="glass card act span-all">
       <div class="act-title">🌐 SSRF probe — URL-like params that may fetch attacker URLs</div>
       <div class="act-row">
-        <input class="inp grow" id="ssrf-url" placeholder="https://your-app.example.com/fetch?url=https://example.com">
-        <input class="inp" id="ssrf-param" placeholder="param (optional)" style="max-width:160px">
+        <input aria-label="URL" class="inp grow" id="ssrf-url" placeholder="https://your-app.example.com/fetch?url=https://example.com">
+        <input aria-label="Parameter name" class="inp mw-160" id="ssrf-param" placeholder="param (optional)">
         <label class="chk"><input type="checkbox" id="ssrf-insecure"> self-signed TLS</label>
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="ssrf-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="ssrf_probe" style="margin-left:auto">🌐 Probe SSRF</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="ssrf-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="ssrf_probe">🌐 Probe SSRF</button>
       </div>
     </div>
-    <div class="glass card act" style="grid-column: 1 / -1">
+    <div class="glass card act span-all">
       <div class="act-title">🔑 Auth attack scan — JWT alg=none, cookie flags, login enum hints</div>
-      <div class="d" style="margin-bottom:8px">No brute force / credential stuffing.</div>
+      <div class="d mb-8">No brute force / credential stuffing.</div>
       <div class="act-row">
-        <input class="inp grow" id="aas-url" placeholder="https://your-app.example.com">
-        <input class="inp grow" id="aas-login" placeholder="login URL (optional)">
+        <input aria-label="URL" class="inp grow" id="aas-url" placeholder="https://your-app.example.com">
+        <input aria-label="Login URL" class="inp grow" id="aas-login" placeholder="login URL (optional)">
         <label class="chk"><input type="checkbox" id="aas-insecure"> self-signed TLS</label>
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="aas-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="auth_attack_scan" style="margin-left:auto">🔑 Scan auth</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="aas-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="auth_attack_scan">🔑 Scan auth</button>
       </div>
     </div>
-    <div class="glass card act" style="grid-column: 1 / -1">
+    <div class="glass card act span-all">
       <div class="act-title">🔢 IDOR scan — adjacent numeric IDs on an authorized object URL</div>
       <div class="act-row">
-        <input class="inp grow" id="idor-url" placeholder="https://your-app.example.com/orders/1001">
-        <input class="inp grow" id="idor-cookie" placeholder="Cookie header (optional)">
+        <input aria-label="URL" class="inp grow" id="idor-url" placeholder="https://your-app.example.com/orders/1001">
+        <input aria-label="Cookie header" class="inp grow" id="idor-cookie" placeholder="Cookie header (optional)">
         <label class="chk"><input type="checkbox" id="idor-insecure"> self-signed TLS</label>
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="idor-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="idor_scan" style="margin-left:auto">🔢 Probe IDOR</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="idor-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="idor_scan">🔢 Probe IDOR</button>
       </div>
     </div>
 
-<div class="glass card act" id="action-db-assert" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-db-assert">
       <div class="act-title">🗄 DB assert — read-only, SELECT-only assertion against a database</div>
-      <div class="d" style="margin-bottom:8px">Needs a second gate — <code>ZYVOR_DB_TESTING_ENABLED=true</code> — and <code>ZYVOR_SANDBOX_DB_IMAGE</code> configured server-side. Deterministic, not LLM-generated — the query runs verbatim via a fixed script (SELECT-only, enforced server-side). <b>The connection string must reference a server-side env var — the value is never sent</b>, only the env var <i>name</i>.</div>
+      <div class="d mb-8">Needs a second gate — <code>ZYVOR_DB_TESTING_ENABLED=true</code> — and <code>ZYVOR_SANDBOX_DB_IMAGE</code> configured server-side. Deterministic, not LLM-generated — the query runs verbatim via a fixed script (SELECT-only, enforced server-side). <b>The connection string must reference a server-side env var — the value is never sent</b>, only the env var <i>name</i>.</div>
       <div class="act-row">
-        <select class="inp" id="dba-engine" style="max-width:130px">
+        <select aria-label="Database engine" class="inp mw-130" id="dba-engine">
           <option value="postgres">postgres</option>
           <option value="mysql">mysql</option>
           <option value="sqlite">sqlite</option>
         </select>
-        <input class="inp grow" id="dba-target" placeholder="target label for engagement scope, e.g. staging-orders-db">
-        <input class="inp grow" id="dba-secretenv" placeholder="server env var name holding the connection string, e.g. DB_DSN_STAGING">
-        <input class="inp" id="dba-timeout" type="number" value="30" min="5" max="120" style="width:90px" title="sandbox timeout (s)">
+        <input aria-label="Database target" class="inp grow" id="dba-target" placeholder="target label for engagement scope, e.g. staging-orders-db">
+        <input aria-label="Env var holding the connection string" class="inp grow" id="dba-secretenv" placeholder="server env var name holding the connection string, e.g. DB_DSN_STAGING">
+        <input class="inp w-90" id="dba-timeout" type="number" value="30" min="5" max="120" title="sandbox timeout (s)">
       </div>
-      <div class="act-row"><textarea class="inp grow" id="dba-query" rows="2" placeholder="SELECT ... (SELECT-only, enforced server-side)"></textarea></div>
+      <div class="act-row"><textarea aria-label="SELECT query" class="inp grow" id="dba-query" rows="2" placeholder="SELECT ... (SELECT-only, enforced server-side)"></textarea></div>
       <div class="act-row">
-        <input class="inp grow" id="dba-query-params" placeholder='query bind params as a JSON array, e.g. ["ord_123"] (optional)'>
+        <input aria-label="Query parameters" class="inp grow" id="dba-query-params" placeholder='query bind params as a JSON array, e.g. ["ord_123"] (optional)'>
       </div>
-      <div class="act-row" style="gap:10px">
-        <select class="inp" id="dba-mode" style="max-width:150px">
+      <div class="act-row gap-10">
+        <select aria-label="Assertion mode" class="inp mw-150" id="dba-mode">
           <option value="row_count">row_count</option>
           <option value="cell_equals">cell_equals</option>
           <option value="column_values">column_values</option>
         </select>
-        <select class="inp" id="dba-op" style="max-width:100px">
+        <select aria-label="Comparison" class="inp mw-100" id="dba-op">
           <option value="==">==</option>
           <option value="!=">!=</option>
           <option value=">">&gt;</option>
@@ -276,79 +276,79 @@
           <option value="<=">&lt;=</option>
           <option value="all_equal">all_equal</option>
         </select>
-        <input class="inp" id="dba-row" type="number" value="0" min="0" style="width:70px" title="row index (cell_equals only)">
-        <input class="inp" id="dba-column" placeholder="column (cell_equals/column_values)" style="max-width:200px">
-        <input class="inp grow" id="dba-value" placeholder='expected value (JSON, e.g. 1, "completed", true)'>
+        <input class="inp w-70" id="dba-row" type="number" value="0" min="0" title="row index (cell_equals only)">
+        <input aria-label="Column" class="inp mw-200" id="dba-column" placeholder="column (cell_equals/column_values)">
+        <input aria-label="Expected value" class="inp grow" id="dba-value" placeholder='expected value (JSON, e.g. 1, "completed", true)'>
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="dba-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="db_assert" style="margin-left:auto">🗄 Run assertion</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="dba-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="db_assert">🗄 Run assertion</button>
       </div>
     </div>
 
-<div class="glass card act" id="action-chaos-inject" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-chaos-inject">
       <div class="act-title">💥 Chaos inject — client-side fault injection while a control test observes</div>
-      <div class="d" style="margin-bottom:8px">Needs a second gate — <code>ZYVOR_CHAOS_INJECTION_ENABLED=true</code> — and <code>ZYVOR_SANDBOX_CHAOS_IMAGE</code> configured server-side. Shapes the sandbox's own egress toward the target (<code>tc</code>/<code>iptables</code>) — never the target's own infrastructure. <b>You must confirm below that this target has consented to fault injection.</b></div>
+      <div class="d mb-8">Needs a second gate — <code>ZYVOR_CHAOS_INJECTION_ENABLED=true</code> — and <code>ZYVOR_SANDBOX_CHAOS_IMAGE</code> configured server-side. Shapes the sandbox's own egress toward the target (<code>tc</code>/<code>iptables</code>) — never the target's own infrastructure. <b>You must confirm below that this target has consented to fault injection.</b></div>
       <div class="act-row">
-        <input class="inp grow" id="ci-url" placeholder="https://your-app.example.com">
-        <select class="inp" id="ci-fault-type" style="max-width:170px">
+        <input aria-label="URL" class="inp grow" id="ci-url" placeholder="https://your-app.example.com">
+        <select aria-label="Fault type" class="inp mw-170" id="ci-fault-type">
           <option value="latency">latency</option>
           <option value="packet_loss">packet_loss</option>
           <option value="connection_reset">connection_reset</option>
           <option value="dependency_timeout">dependency_timeout</option>
         </select>
       </div>
-      <div class="act-row" style="gap:10px">
-        <input class="inp" id="ci-latency" type="number" value="200" min="0" max="5000" style="width:110px" title="latency_ms (latency fault)">
-        <input class="inp" id="ci-loss" type="number" value="10" min="0" max="100" style="width:100px" title="packet_loss_pct (packet_loss fault)">
-        <input class="inp" id="ci-duration" type="number" value="30" min="5" max="120" style="width:100px" title="duration_s">
-        <select class="inp" id="ci-control-kind" style="max-width:120px">
+      <div class="act-row gap-10">
+        <input class="inp w-110" id="ci-latency" type="number" value="200" min="0" max="5000" title="latency_ms (latency fault)">
+        <input class="inp w-100" id="ci-loss" type="number" value="10" min="0" max="100" title="packet_loss_pct (packet_loss fault)">
+        <input class="inp w-100" id="ci-duration" type="number" value="30" min="5" max="120" title="duration_s">
+        <select aria-label="Control check kind" class="inp mw-120" id="ci-control-kind">
           <option value="flow">flow</option>
           <option value="smoke">smoke</option>
         </select>
       </div>
-      <div class="act-row"><textarea class="inp grow" id="ci-control-desc" rows="2" placeholder="control test — flow: describe the journey to run while the fault is active; smoke: @grep pattern (optional)"></textarea></div>
-      <div class="act-row" style="gap:10px">
-        <input class="inp" id="ci-error-threshold" type="number" value="10" min="0" max="100" style="width:110px" title="error_rate_threshold_pct">
-        <input class="inp" id="ci-recovery-sla" type="number" value="30" min="1" max="300" style="width:110px" title="recovery_sla_s">
+      <div class="act-row"><textarea aria-label="Description" class="inp grow" id="ci-control-desc" rows="2" placeholder="control test — flow: describe the journey to run while the fault is active; smoke: @grep pattern (optional)"></textarea></div>
+      <div class="act-row gap-10">
+        <input class="inp w-110" id="ci-error-threshold" type="number" value="10" min="0" max="100" title="error_rate_threshold_pct">
+        <input class="inp w-110" id="ci-recovery-sla" type="number" value="30" min="1" max="300" title="recovery_sla_s">
         <label class="chk"><input type="checkbox" id="ci-insecure"> self-signed TLS</label>
       </div>
-      <div class="act-row" style="gap:10px">
-        <label class="chk" style="font-weight:600"><input type="checkbox" id="ci-consent"> this target has consented to fault injection</label>
+      <div class="act-row gap-10">
+        <label class="chk fw-600"><input type="checkbox" id="ci-consent"> this target has consented to fault injection</label>
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="ci-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="chaos_inject" style="margin-left:auto">💥 Inject fault</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="ci-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="chaos_inject">💥 Inject fault</button>
       </div>
     </div>
 
-<div class="glass card act" id="action-chaos-webhook" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-chaos-webhook">
       <div class="act-title">🌐 Chaos webhook — trigger your own chaos experiment, then observe</div>
-      <div class="d" style="margin-bottom:8px">Zero new sandbox capability — POSTs to a chaos-experiment webhook you own (Chaos Mesh/Litmus/etc.), waits, then runs a control test. Same two gates as Chaos inject. <b>You must confirm below that this target has consented to fault injection.</b></div>
+      <div class="d mb-8">Zero new sandbox capability — POSTs to a chaos-experiment webhook you own (Chaos Mesh/Litmus/etc.), waits, then runs a control test. Same two gates as Chaos inject. <b>You must confirm below that this target has consented to fault injection.</b></div>
       <div class="act-row">
-        <input class="inp grow" id="cw-url" placeholder="https://your-app.example.com">
-        <input class="inp" id="cw-settle" type="number" value="5" min="1" max="60" style="width:100px" title="settle_s">
+        <input aria-label="URL" class="inp grow" id="cw-url" placeholder="https://your-app.example.com">
+        <input class="inp w-100" id="cw-settle" type="number" value="5" min="1" max="60" title="settle_s">
       </div>
       <div class="act-row">
-        <input class="inp grow" id="cw-start-url" placeholder="experiment start webhook URL">
-        <input class="inp grow" id="cw-stop-url" placeholder="experiment stop webhook URL (optional)">
+        <input aria-label="URL" class="inp grow" id="cw-start-url" placeholder="experiment start webhook URL">
+        <input aria-label="URL" class="inp grow" id="cw-stop-url" placeholder="experiment stop webhook URL (optional)">
       </div>
-      <div class="act-row" style="gap:10px">
-        <select class="inp" id="cw-control-kind" style="max-width:120px">
+      <div class="act-row gap-10">
+        <select aria-label="Control check kind" class="inp mw-120" id="cw-control-kind">
           <option value="flow">flow</option>
           <option value="smoke">smoke</option>
         </select>
-        <input class="inp" id="cw-error-threshold" type="number" value="10" min="0" max="100" style="width:110px" title="error_rate_threshold_pct">
-        <input class="inp" id="cw-recovery-sla" type="number" value="30" min="1" max="300" style="width:110px" title="recovery_sla_s">
+        <input class="inp w-110" id="cw-error-threshold" type="number" value="10" min="0" max="100" title="error_rate_threshold_pct">
+        <input class="inp w-110" id="cw-recovery-sla" type="number" value="30" min="1" max="300" title="recovery_sla_s">
         <label class="chk"><input type="checkbox" id="cw-insecure"> self-signed TLS</label>
       </div>
-      <div class="act-row"><textarea class="inp grow" id="cw-control-desc" rows="2" placeholder="control test — flow: describe the journey to run after triggering the experiment; smoke: @grep pattern (optional)"></textarea></div>
-      <div class="act-row" style="gap:10px">
-        <label class="chk" style="font-weight:600"><input type="checkbox" id="cw-consent"> this target has consented to fault injection</label>
+      <div class="act-row"><textarea aria-label="Description" class="inp grow" id="cw-control-desc" rows="2" placeholder="control test — flow: describe the journey to run after triggering the experiment; smoke: @grep pattern (optional)"></textarea></div>
+      <div class="act-row gap-10">
+        <label class="chk fw-600"><input type="checkbox" id="cw-consent"> this target has consented to fault injection</label>
       </div>
       <div class="act-row">
-        <select class="inp grow eng-select" id="cw-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="chaos_webhook" style="margin-left:auto">🌐 Trigger &amp; observe</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="cw-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="chaos_webhook">🌐 Trigger &amp; observe</button>
       </div>
     </div>
 

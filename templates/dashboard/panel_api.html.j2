@@ -4,90 +4,90 @@
     <p>OpenAPI contract tests, live data streams, and auth sessions.</p>
   </div>
   <div class="acts">
-<div class="glass card act" id="action-api-contract" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-api-contract">
       <div class="act-title">🔌 API contract — validate REST endpoints against their OpenAPI schema
-        <button class="dl-btn" id="api-preset-forge" title="fill Forge defaults" style="margin-left:8px">🔥 Forge preset</button>
+        <button class="dl-btn ml-8" id="api-preset-forge" title="fill Forge defaults">🔥 Forge preset</button>
       </div>
       <div class="act-row">
-        <input class="inp grow" id="api-url" placeholder="API host, e.g. http://127.0.0.1 or https://api.example.com">
-        <input class="inp" id="api-port" placeholder="port" title="port (default: Forge 24631)" value="24631" style="max-width:110px">
-        <input class="inp grow" id="api-spec" placeholder="OpenAPI spec URL or /path (…/openapi.json)">
+        <input aria-label="URL" class="inp grow" id="api-url" placeholder="API host, e.g. http://127.0.0.1 or https://api.example.com">
+        <input class="inp mw-110" id="api-port" placeholder="port" title="port (default: Forge 24631)" value="24631">
+        <input aria-label="OpenAPI spec URL or path" class="inp grow" id="api-spec" placeholder="OpenAPI spec URL or /path (…/openapi.json)">
       </div>
-      <div class="act-row"><textarea class="inp grow" id="api-spec-json" rows="2" placeholder="…or paste an inline OpenAPI JSON (optional; overrides the URL)"></textarea></div>
-      <div class="act-row" style="gap:12px">
-        <input class="inp" id="api-token" placeholder="API key / bearer token" style="max-width:280px">
+      <div class="act-row"><textarea aria-label="Inline OpenAPI JSON" class="inp grow" id="api-spec-json" rows="2" placeholder="…or paste an inline OpenAPI JSON (optional; overrides the URL)"></textarea></div>
+      <div class="act-row gap-12">
+        <input aria-label="API key or bearer token" class="inp mw-280" id="api-token" placeholder="API key / bearer token">
         <label class="chk"><input type="checkbox" id="api-writes"> include writes (POST/PUT/DELETE)</label>
         <label class="chk"><input type="checkbox" id="api-insecure"> self-signed TLS</label>
-        <button class="run-btn act-btn" data-kind="api_contract" style="margin-left:auto">🔌 Test API</button>
+        <button class="run-btn act-btn ml-auto" data-kind="api_contract">🔌 Test API</button>
       </div>
     </div>
 
-<div class="glass card act" id="action-api-contract-diff" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-api-contract-diff">
       <div class="act-title">🆚 API contract diff — breaking-change detection between two OpenAPI specs</div>
-      <div class="d" style="margin-bottom:8px">Static diff, no live target interaction — not gated by a security engagement. Each field takes an http(s) URL, a <code>git:&lt;ref&gt;:&lt;path&gt;</code> reference against this checkout, or pasted inline JSON.</div>
-      <div class="act-row"><textarea class="inp grow" id="acd-spec-a" rows="2" placeholder="spec A (baseline) — URL, git:<ref>:<path>, or paste inline JSON"></textarea></div>
-      <div class="act-row"><textarea class="inp grow" id="acd-spec-b" rows="2" placeholder="spec B (candidate) — URL, git:<ref>:<path>, or paste inline JSON"></textarea></div>
-      <div class="act-row" style="gap:12px">
+      <div class="d mb-8">Static diff, no live target interaction — not gated by a security engagement. Each field takes an http(s) URL, a <code>git:&lt;ref&gt;:&lt;path&gt;</code> reference against this checkout, or pasted inline JSON.</div>
+      <div class="act-row"><textarea aria-label="Spec A (baseline)" class="inp grow" id="acd-spec-a" rows="2" placeholder="spec A (baseline) — URL, git:<ref>:<path>, or paste inline JSON"></textarea></div>
+      <div class="act-row"><textarea aria-label="Spec B (candidate)" class="inp grow" id="acd-spec-b" rows="2" placeholder="spec B (candidate) — URL, git:<ref>:<path>, or paste inline JSON"></textarea></div>
+      <div class="act-row gap-12">
         <label class="chk"><input type="checkbox" id="acd-insecure"> self-signed TLS</label>
-        <select class="inp" id="acd-fail-on" style="max-width:180px">
+        <select aria-label="Fail on" class="inp mw-180" id="acd-fail-on">
           <option value="breaking">fail on: breaking only</option>
           <option value="any">fail on: any change</option>
         </select>
-        <button class="run-btn act-btn" data-kind="api_contract_diff" style="margin-left:auto">🆚 Diff specs</button>
+        <button class="run-btn act-btn ml-auto" data-kind="api_contract_diff">🆚 Diff specs</button>
       </div>
     </div>
 
-<div class="glass card act" id="action-contract-verify" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-contract-verify">
       <div class="act-title">🤝 Contract verify — replay a recorded HAR against a live provider</div>
-      <div class="d" style="margin-bottom:8px">HAR-derived, not Pact — no broker, no contract versioning. Derives per-endpoint expectations (status, content-type, top-level JSON key shape) from a recorded consumer interaction set and checks the live provider still matches.</div>
+      <div class="d mb-8">HAR-derived, not Pact — no broker, no contract versioning. Derives per-endpoint expectations (status, content-type, top-level JSON key shape) from a recorded consumer interaction set and checks the live provider still matches.</div>
       <div class="act-row">
-        <input class="inp grow" id="cvf-url" placeholder="provider base URL, e.g. https://api.example.com">
-        <input class="inp grow" id="cvf-har" placeholder="HAR path on disk (relative to repo root, or absolute)">
+        <input aria-label="Provider base URL" class="inp grow" id="cvf-url" placeholder="provider base URL, e.g. https://api.example.com">
+        <input aria-label="HAR path" class="inp grow" id="cvf-har" placeholder="HAR path on disk (relative to repo root, or absolute)">
       </div>
-      <div class="act-row" style="gap:12px">
+      <div class="act-row gap-12">
         <label class="chk"><input type="checkbox" id="cvf-insecure"> self-signed TLS</label>
-        <select class="inp grow eng-select" id="cvf-eng"><option value="">— select an authorized engagement —</option></select>
-        <button class="run-btn act-btn" data-kind="contract_verify" style="margin-left:auto">🤝 Verify contract</button>
+        <select aria-label="Authorized engagement" class="inp grow eng-select" id="cvf-eng"><option value="">— select an authorized engagement —</option></select>
+        <button class="run-btn act-btn ml-auto" data-kind="contract_verify">🤝 Verify contract</button>
       </div>
     </div>
 
-<div class="glass card act" id="action-realtime" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-realtime">
       <div class="act-title">📡 Live data — assert WebSocket / SSE streams update, not just load</div>
       <div class="act-row">
-        <input class="inp grow" id="rt-url" placeholder="App URL, e.g. https://app.example.com">
-        <input class="inp grow" id="rt-ws" placeholder="WS path (e.g. /api/v1/ws/flows) or full wss:// URL">
+        <input aria-label="URL" class="inp grow" id="rt-url" placeholder="App URL, e.g. https://app.example.com">
+        <input aria-label="WebSocket path or URL" class="inp grow" id="rt-ws" placeholder="WS path (e.g. /api/v1/ws/flows) or full wss:// URL">
       </div>
       <div class="act-row">
-        <input class="inp grow" id="rt-sse" placeholder="SSE path (optional)">
-        <input class="inp grow" id="rt-live" placeholder="live-region CSS selector to watch (optional)">
+        <input aria-label="SSE path" class="inp grow" id="rt-sse" placeholder="SSE path (optional)">
+        <input aria-label="Live region selector" class="inp grow" id="rt-live" placeholder="live-region CSS selector to watch (optional)">
       </div>
-      <div class="act-row" style="gap:10px">
-        <input class="inp" id="rt-token" placeholder="token (optional)" style="max-width:220px">
-        <input class="inp" id="rt-ticket" placeholder="ticket-issue path (veyron)" style="max-width:220px">
-        <input class="inp" id="rt-expect" type="number" value="1" style="max-width:130px" title="min messages">
+      <div class="act-row gap-10">
+        <input aria-label="Token" class="inp mw-220" id="rt-token" placeholder="token (optional)">
+        <input aria-label="Ticket-issue path" class="inp mw-220" id="rt-ticket" placeholder="ticket-issue path (veyron)">
+        <input class="inp mw-130" id="rt-expect" type="number" value="1" title="min messages">
         <label class="chk"><input type="checkbox" id="rt-subproto"> JWT subprotocol</label>
         <label class="chk"><input type="checkbox" id="rt-insecure"> self-signed TLS</label>
-        <button class="run-btn act-btn" data-kind="realtime" style="margin-left:auto">📡 Probe live</button>
+        <button class="run-btn act-btn ml-auto" data-kind="realtime">📡 Probe live</button>
       </div>
     </div>
     
-<div class="glass card act" id="action-auth" style="grid-column: 1 / -1">
+<div class="glass card act span-all" id="action-auth">
       <div class="act-title">🔐 Auth & session — login → reusable session → logout/expiry/negative checks</div>
       <div class="act-row">
-        <input class="inp grow" id="au-url" placeholder="App URL, e.g. https://app.example.com">
-        <input class="inp grow" id="au-protected" placeholder="protected path (default /)">
+        <input aria-label="App URL" class="inp grow" id="auth-url" placeholder="App URL, e.g. https://app.example.com">
+        <input aria-label="Protected path" class="inp grow" id="au-protected" placeholder="protected path (default /)">
       </div>
       <div class="act-row">
-        <input class="inp grow" id="au-login" placeholder="login page path (in-browser form) — e.g. /login">
-        <input class="inp grow" id="au-api" placeholder="…or API login endpoint — e.g. /api/v1/auth/login">
+        <input aria-label="Login page path" class="inp grow" id="au-login" placeholder="login page path (in-browser form) — e.g. /login">
+        <input aria-label="API login endpoint" class="inp grow" id="au-api" placeholder="…or API login endpoint — e.g. /api/v1/auth/login">
       </div>
-      <div class="act-row" style="gap:10px">
-        <input class="inp" id="au-user" placeholder="username" style="max-width:200px">
-        <input class="inp" id="au-pass" type="password" placeholder="password" style="max-width:200px">
-        <input class="inp" id="au-logout" placeholder="logout path (optional)" style="max-width:220px">
+      <div class="act-row gap-10">
+        <input aria-label="Username" class="inp mw-200" id="au-user" placeholder="username">
+        <input aria-label="Password" class="inp mw-200" id="au-pass" type="password" placeholder="password">
+        <input aria-label="Logout path" class="inp mw-220" id="au-logout" placeholder="logout path (optional)">
         <label class="chk"><input type="checkbox" id="au-save" checked> save session</label>
-        <label class="chk"><input type="checkbox" id="au-insecure"> self-signed TLS</label>
-        <button class="run-btn act-btn" data-kind="auth_test" style="margin-left:auto">🔐 Test auth</button>
+        <label class="chk"><input type="checkbox" id="auth-insecure"> self-signed TLS</label>
+        <button class="run-btn act-btn ml-auto" data-kind="auth_test">🔐 Test auth</button>
       </div>
     </div>
     
