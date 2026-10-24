@@ -23,9 +23,28 @@ import orchestrator.persistence.store as store_module
 import orchestrator.security.sandbox as sandbox_module
 from agents.db_assert.migration import compare_to_baseline, parse_check_lines
 from orchestrator.dashboard.jobs import VALID_KINDS, _validate
-from tests.unit.test_jobs_validate import _allow_engagement
 
 RUNNER = Path(__file__).resolve().parents[2] / "agents" / "db_assert" / "runner_script.py"
+
+class _EngagementStore:
+    def __init__(self, engagement):
+        self._engagement = engagement
+
+    def get_engagement(self, engagement_id):
+        return self._engagement if engagement_id == "eng-1" else None
+
+    def audit(self, action, **kwargs):
+        pass
+
+
+def _allow_engagement(monkeypatch):
+    engagement = {
+        "id": "eng-1", "target_pattern": "*", "scope_statement": "authorized", "tier": "active_recon",
+        "authorized_by": "admin", "created_at": "2026-01-01T00:00:00+00:00",
+        "expires_at": None, "revoked_at": None, "revoked_by": None,
+    }
+    monkeypatch.setattr(store_module, "get_store", lambda: _EngagementStore(engagement))
+
 
 CHECKS = [
     {"name": "orders-exist", "query": "SELECT id FROM orders", "assertion": {"mode": "row_count", "op": ">=", "value": 1}},
