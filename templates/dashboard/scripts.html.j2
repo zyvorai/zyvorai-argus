@@ -238,15 +238,29 @@ function podStatus(p) {
 
 /* dynamic favicon + tab title reflecting status */
 const STATUS_DOT = { go: "#22c55e", degraded: "#f59e0b", down: "#ef4444", offline: "#8e8e93" };
+const FAVICON_MARK_SRC = "{{ favicon_href() | trim }}";
+let faviconMark = null;
 function setFavicon(status) {
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 32;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = STATUS_DOT[status] || STATUS_DOT.offline;
-  ctx.beginPath(); ctx.arc(16, 16, 11, 0, Math.PI * 2); ctx.fill();
-  let link = document.querySelector('link[rel="icon"]');
-  if (!link) { link = document.createElement("link"); link.rel = "icon"; document.head.appendChild(link); }
-  link.href = canvas.toDataURL("image/png");
+  const paint = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 64;
+    const ctx = canvas.getContext("2d");
+    if (faviconMark) ctx.drawImage(faviconMark, 0, 0, 64, 64);
+    // Status light bottom-right, ringed in the dark tile colour so it reads on any tab.
+    ctx.fillStyle = "#0b0a1c";
+    ctx.beginPath(); ctx.arc(47, 47, 15, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = STATUS_DOT[status] || STATUS_DOT.offline;
+    ctx.beginPath(); ctx.arc(47, 47, 11, 0, Math.PI * 2); ctx.fill();
+    let link = document.querySelector('link[rel="icon"]');
+    if (!link) { link = document.createElement("link"); link.rel = "icon"; document.head.appendChild(link); }
+    link.type = "image/png";
+    link.href = canvas.toDataURL("image/png");
+  };
+  if (faviconMark) { paint(); return; }
+  const img = new Image();
+  img.onload = () => { faviconMark = img; paint(); };
+  img.onerror = paint; // still show the status light without the mark
+  img.src = FAVICON_MARK_SRC;
 }
 
 function renderHero(overview, pods, runs) {

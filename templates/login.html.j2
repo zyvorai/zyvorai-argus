@@ -58,12 +58,15 @@
     border-right: 1px solid var(--border); padding: 48px 40px;
     display: flex; flex-direction: column; justify-content: space-between;
   }
+  .argus-lockup { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .argus-icon { border-radius: 22%; flex: none; box-shadow: 0 0 0 1px var(--border), 0 6px 20px rgba(124,108,255,0.28); }
+  .argus-name { font-size: 1.6rem; font-weight: 650; letter-spacing: -0.03em; color: var(--text); }
   .zyvor-mark {
     display: inline-flex; align-items: center; gap: 7px;
-    color: var(--text); text-decoration: none; margin-bottom: 16px;
+    color: var(--text-secondary); text-decoration: none; margin-bottom: 16px;
   }
   .zyvor-mark .mark-word {
-    font-weight: 700; font-size: 15px; letter-spacing: -0.03em;
+    font-weight: 600; font-size: 12px; letter-spacing: 0;
   }
   .rail-title {
     font-size: clamp(1.75rem, 3vw, 2.25rem); font-weight: 600;
@@ -135,17 +138,15 @@
     * { transition-duration: 0.01ms !important; }
   }
 </style>
+{% from "dashboard/_brand.html.j2" import argus_icon, zyvor_credit, favicon_href %}
+<link rel="icon" type="image/svg+xml" href="{{ favicon_href() | trim }}">
 </head>
 <body>
 <div class="login-shell">
   <aside class="login-rail" aria-label="Zyvor Argus">
     <div>
-      <a class="zyvor-mark" href="https://zyvor.dev/" target="_blank" rel="noopener noreferrer" aria-label="Zyvor home">
-        <svg class="mark-z" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-          <path d="M2 2h14L6.6 16H16" fill="none" stroke="#ff5a15" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
-        </svg>
-        <span class="mark-word">zyvor</span>
-      </a>
+      <div class="argus-lockup">{{ argus_icon("lr", 44) }}<span class="argus-name">Argus</span></div>
+      {{ zyvor_credit() }}
       <h1 class="rail-title">Mission Control</h1>
       <p class="rail-tagline">Autonomous testing, security, and requirements quality for your product.</p>
       <div class="rail-features">
@@ -169,12 +170,8 @@
   <main class="login-main">
     <div class="login-card">
       <div class="mobile-brand">
-        <a class="zyvor-mark" href="https://zyvor.dev/" target="_blank" rel="noopener noreferrer" aria-label="Zyvor home">
-          <svg class="mark-z" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-            <path d="M2 2h14L6.6 16H16" fill="none" stroke="#ff5a15" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
-          </svg>
-          <span class="mark-word">zyvor</span>
-        </a>
+        <div class="argus-lockup" style="justify-content:center">{{ argus_icon("lm", 40) }}<span class="argus-name">Argus</span></div>
+        {{ zyvor_credit() }}
         <h1 class="rail-title" style="font-size:1.5rem;margin-top:8px">Mission Control</h1>
       </div>
 

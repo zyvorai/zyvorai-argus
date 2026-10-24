@@ -118,19 +118,20 @@ make desktop-build-signed   # fails fast with a clear message if any of these ar
 
 ## Icons
 
-`src-tauri/icons/icon-source.png` is the real Zyvor mark — rendered at
-1024×1024 from the canonical favicon SVG
-(`hypercluster/desktop/public/brand/zavor-favicon.svg`, also the source
-for zyvor.dev's own favicon; found via `hypercluster/.local-deploy/
-hypersdk-web/context/build/img/zavor-favicon.svg` across every locale
-build, confirming it's the live production asset, not a draft). This repo
-has no brand assets of its own — `../hypercluster` is the actual source of
-truth for Zyvor branding.
+The app icon is the Argus "Panoptes" mark (a ring of eight eyes around a
+pupil with a green status light). The source of truth is `../brand/`:
+`argus-icon.svg` (full detail), `argus-icon-small.svg` (favicon and sizes of
+32 px and below) and `argus-mark-template.svg` (black on transparent, for the
+macOS menu-bar template icon). `../brand/panoptes.py` generates those SVGs.
 
-To regenerate the platform icon set after changing the source:
+To rebuild everything shipped from them (`src-tauri/icons/*`, including
+`icon.icns` and `tray-template*.png`, plus the site favicon, apple-touch icon
+and share card):
 
 ```bash
-cd desktop && npx tauri icon src-tauri/icons/icon-source.png -o src-tauri/icons
+brew install librsvg        # rsvg-convert
+python3 brand/panoptes.py   # only if you changed the mark itself
+brand/build-icons.sh
 ```
 
 ## Building
