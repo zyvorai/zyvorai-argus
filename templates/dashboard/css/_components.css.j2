@@ -190,11 +190,21 @@ select option { background: var(--surface-solid); color: var(--text); }
 .pod-search { width: min(240px, 40vw); }
 .target-switch { max-width: 170px; min-height: 32px; border-radius: 980px; }
 
+/* captioned select: the caption and the value share one capsule */
+.select-field { display: inline-flex; align-items: center; gap: 4px; padding-left: 12px; border-radius: var(--r-control); background: var(--fill); }
+.select-field > span { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+.select-field select.inp { background-color: transparent; border-color: transparent; min-height: 34px; padding-left: 6px; }
+.select-field select.inp:hover { background-color: transparent; }
+.select-field:focus-within { box-shadow: 0 0 0 3px var(--focus-ring); }
+label.d { margin-top: 0; }
+
 /* ---- pills (status chips): tinted fill, no outline ---- */
 .chip, .ask-badge, .knowledge-lamp {
   display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 980px;
   font-size: 0.76rem; font-weight: 650; background: var(--fill); color: var(--text-secondary); border: none;
 }
+button.chip { border: none; font-family: inherit; cursor: pointer; }
+button.chip:hover { background: var(--accent-soft); color: var(--text); }
 .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
 .chip.pass { color: var(--status-ok); background: var(--ok-soft); }
 .chip.fail { color: var(--status-error); background: var(--error-soft); }

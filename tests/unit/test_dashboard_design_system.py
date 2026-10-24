@@ -91,3 +91,48 @@ def test_reduced_transparency_falls_back_to_solid_surfaces():
     tokens = (CSS / "_tokens.css.j2").read_text()
     assert "prefers-reduced-transparency: reduce" in tokens
     assert "--glass-blur: none" in tokens
+
+
+PANELS_A = ("pipeline", "visual", "quality", "probes", "journeys")
+
+
+def _panel(name: str) -> str:
+    return (TEMPLATES / "dashboard" / f"panel_{name}.html.j2").read_text()
+
+
+def test_migrated_panels_have_no_inline_styles():
+    for name in PANELS_A:
+        assert 'style="' not in _panel(name), name
+
+
+def test_migrated_panels_name_every_form_control():
+    control = re.compile(r"<(input|select|textarea)\b([^>]*)>")
+    for name in PANELS_A:
+        html = _panel(name)
+        for m in control.finditer(html):
+            attrs = m.group(2)
+            if re.search(r'type="(checkbox|radio|hidden)"', attrs):
+                continue
+            before = html[: m.start()]
+            wrapped = before.rfind("<label") > before.rfind("</label>")
+            named = re.search(r'\b(aria-label|aria-labelledby|title)="', attrs)
+            idm = re.search(r'\bid="([^"]+)"', attrs)
+            has_for = idm and re.search(r'<label[^>]*\bfor="%s"' % re.escape(idm.group(1)), html)
+            assert wrapped or named or has_for, f"{name}: unlabeled control {attrs.strip()[:60]}"
+
+
+def test_utility_classes_used_by_the_panels_exist():
+    css = "\n".join(p.read_text() for p in CSS.glob("*.j2"))
+    used = set()
+    for name in PANELS_A:
+        for cls in re.findall(r'class="([^"]*)"', _panel(name)):
+            used.update(c for c in cls.split() if re.fullmatch(r"(ml-auto|pointer|span-all|fw-400|(mb|mt|gap|w|mw)-\d+)", c))
+    assert used, "expected utility classes in the migrated panels"
+    for cls in sorted(used):
+        assert f".{cls} " in css or f".{cls}," in css or f".{cls}{{" in css, cls
+
+
+def test_bare_source_and_device_selects_carry_a_visible_caption():
+    html = "".join(_panel(n) for n in PANELS_A)
+    assert html.count('class="select-field"') >= 9
+    assert '<label class="select-field"><span>Source</span><select class="inp" id="run-source">' in html
