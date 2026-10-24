@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- **One licence everywhere.** The last 22 Python files that still carried an Apache-2.0 header (coverage, probes, requirements sources and their tests) now carry the Zyvor Production License v1.0 header, the login page footer no longer says AGPL-3.0, and the npm and Cargo manifests point at the `LICENSE` file. A test fails the build if an Apache/AGPL header or footer reappears in a first-party file.
 - Replaced the AGPL-3.0 + Argus Commercial License dual license with the Zyvor Production License v1.0. Non-production use is free. Production use requires a separate paid commercial license. Published SKU prices are withdrawn; commercial terms are issued separately (https://zyvor.dev).
 
 ### Added

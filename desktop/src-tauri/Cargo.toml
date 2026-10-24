@@ -3,6 +3,7 @@ name = "zyvor-argus-desktop"
 version = "0.1.2"
 description = "Zyvor Argus — native desktop shell around `argus serve`"
 edition = "2021"
+license-file = "../../LICENSE"
 
 [lib]
 name = "zyvor_argus_desktop_lib"
