@@ -81,8 +81,34 @@ cd desktop && npm install && npm run tauri dev
    React/Vite — polls a `dashboard_url` Tauri command until the server is
    ready, then navigates the window straight to
    `http://127.0.0.1:<port>/dashboard`.
-3. Closing the window kills the spawned `argus serve` process (no
-   orphaned server left running after the app quits).
+3. **Quitting** the app (menu-bar item, **Zyvor Argus → Quit**, or ⌘Q) kills the
+   spawned `argus serve` process, so no orphaned server is left running.
+   Closing the window only hides it (see below); clicking the Dock icon brings
+   it back.
+
+## Menu-bar status and notifications
+
+A menu-bar item shows what Argus is doing while the window is closed:
+
+- the label beside the icon reads e.g. `1 running · 5 open` (blank when idle and
+  there are no open findings);
+- its menu lists the running-job count and open-findings count, and has
+  **Open Mission Control**, **Settings…** and **Quit**;
+- a macOS notification appears when a job finishes or fails. Cancelled jobs are
+  silent, and the notice names the job kind only, never error text.
+
+How it works (`src-tauri/src/monitor.rs`): a Rust thread polls
+`/api/dashboard/jobs` and `/api/dashboard/findings` every 4 s (every 15 s after
+repeated failures) on the local server, or on the **Remote URL** if one is set.
+The first poll only records state, so launching the app never replays old jobs.
+The decisions (what counts as a transition, what the label says) are in
+`src-tauri/src/monitor_logic.rs`, which has no I/O and its own unit tests.
+
+Limits: a remote Mission Control that needs a login returns 401 to the poller, so
+the label and notifications stay empty there. macOS only shows notifications for a
+signed `.app` with a stable bundle id; an unbundled `cargo run` binary may not
+display them (the notice is still logged to stderr). The menu-bar icon is the
+colour app icon, not a monochrome template image.
 
 ## Settings
 

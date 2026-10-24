@@ -1,12 +1,15 @@
 // Copyright 2026 Zyvor AI Labs · https://zyvor.dev
 // SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
 
+mod monitor;
+mod monitor_logic;
 mod paths;
 mod server;
 
 use paths::AppSettings;
 use server::ServerState;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 #[tauri::command]
@@ -35,6 +38,53 @@ fn open_settings_window(app: &AppHandle) {
         .inner_size(440.0, 380.0)
         .resizable(false)
         .build();
+}
+
+fn show_main_window(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+    }
+}
+
+/// Menu-bar item: shows running-job and open-finding counts (kept current by
+/// `monitor`), opens the window or Settings, and is the way to quit now that
+/// closing the window only hides it.
+fn setup_tray(app: &AppHandle) -> tauri::Result<monitor::Handles> {
+    let running = MenuItem::with_id(app, "tray_running", "No jobs running", false, None::<&str>)?;
+    let findings = MenuItem::with_id(app, "tray_findings", "Open findings: …", false, None::<&str>)?;
+    let open = MenuItem::with_id(app, "tray_open", "Open Mission Control", true, None::<&str>)?;
+    let settings = MenuItem::with_id(app, "tray_settings", "Settings…", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "tray_quit", "Quit Zyvor Argus", true, Some("CmdOrCtrl+Q"))?;
+    let menu = Menu::with_items(
+        app,
+        &[
+            &running,
+            &findings,
+            &PredefinedMenuItem::separator(app)?,
+            &open,
+            &settings,
+            &PredefinedMenuItem::separator(app)?,
+            &quit,
+        ],
+    )?;
+
+    let mut builder = TrayIconBuilder::with_id("argus")
+        .tooltip("Zyvor Argus")
+        .menu(&menu)
+        .show_menu_on_left_click(true)
+        .on_menu_event(|app, event| match event.id().as_ref() {
+            "tray_open" => show_main_window(app),
+            "tray_settings" => open_settings_window(app),
+            "tray_quit" => app.exit(0),
+            _ => {}
+        });
+    if let Some(icon) = app.default_window_icon() {
+        builder = builder.icon(icon.clone());
+    }
+    let tray = builder.build(app)?;
+    Ok(monitor::Handles { tray, running, findings })
 }
 
 /// Native app menu — mainly so ⌘, opens Settings and the standard
@@ -101,6 +151,7 @@ fn setup_menu(app: &AppHandle) -> tauri::Result<()> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .manage(ServerState::default())
         .invoke_handler(tauri::generate_handler![
             dashboard_url,
@@ -109,12 +160,14 @@ pub fn run() {
         ])
         .setup(|app| {
             setup_menu(app.handle())?;
+            let tray = setup_tray(app.handle())?;
             let settings = paths::load_settings();
             server::start_in_background(
                 app.handle().clone(),
                 settings.argus_bin,
                 settings.remote_url,
             );
+            monitor::start(app.handle().clone(), tray);
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -129,19 +182,21 @@ pub fn run() {
     app.run(|app_handle, event| match event {
         RunEvent::WindowEvent {
             label,
-            event: WindowEvent::CloseRequested { .. },
+            event: WindowEvent::CloseRequested { api, .. },
             ..
         } if label == "main" => {
-            // Closing *the settings window* should just close that window —
-            // checked by `label` above, since a second window (added for
-            // Settings) means this event now fires for either one. Closing
-            // the *main* window quits the whole app: there's no tray icon
-            // and nothing else to show, so leaving `argus serve` running
-            // invisibly after the only real window closes would just be an
-            // orphaned process with no way back to it.
-            server::shutdown(&app_handle.state::<ServerState>());
-            app_handle.exit(0);
+            // Closing the main window only hides it: `argus serve` keeps
+            // running so jobs finish and the menu-bar item keeps reporting.
+            // Quit (menu-bar item, app menu or ⌘Q) is what ends the app and
+            // kills the child. The settings window just closes normally.
+            api.prevent_close();
+            if let Some(w) = app_handle.get_webview_window("main") {
+                let _ = w.hide();
+            }
         }
+        // Clicking the Dock icon with every window hidden brings it back.
+        #[cfg(target_os = "macos")]
+        RunEvent::Reopen { .. } => show_main_window(app_handle),
         RunEvent::ExitRequested { .. } | RunEvent::Exit => {
             server::shutdown(&app_handle.state::<ServerState>());
         }
