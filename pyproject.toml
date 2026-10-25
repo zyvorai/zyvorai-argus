@@ -45,7 +45,7 @@ dev = [
     "types-PyYAML",
 ]
 knowledge = [
-    "langchain==1.4.6",
+    "langchain==1.4.7",
     "langchain-openai==1.7.2",
     "langchain-qdrant==1.1.0",
     "langchain-text-splitters>=1.0.0,<2.0.0",
