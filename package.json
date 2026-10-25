@@ -27,7 +27,7 @@
     "docs:sync": "node scripts/user-docs/sync-to-website.mjs"
   },
   "dependencies": {
-    "@tauri-apps/cli": "^2.12.3",
+    "@tauri-apps/cli": "^2.12.4",
     "axe-core": "^4.14.0"
   },
   "devDependencies": {
